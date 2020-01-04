@@ -7,6 +7,7 @@ More details on the blog post for it: https://siderite.dev/blog/linq-in-javascri
 
 **Usage**
 
+```
 const source = ... an array or a generator function or anything that is iterable... ;
 const enumerable = Enumerable.from(source); // now you can both iterate and use LINQ like functions
 const result = enumerable
@@ -18,6 +19,7 @@ const result = enumerable
                 .skip(15)
                 .take(5)
                 .toArray();
+ ```
                 
 **Original Enumerable**
 
