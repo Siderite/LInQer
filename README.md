@@ -5,6 +5,8 @@ Array functions in Javascript create a new array for each operation, which is te
 
 More details on the blog post for it: https://siderite.dev/blog/linq-in-javascript-linqer/. Leave comments there or add Issues here in order to get features or bug fixes or whatever.
 
+Find it hosted on GitHub Pages and use it freely in your projects at: https://siderite.github.io/BlogHostedFiles/LInQer-min.js
+
 **Usage**
 
 ```
