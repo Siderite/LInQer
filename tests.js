@@ -317,6 +317,10 @@ QUnit.test( "Enumerable.skip", function( assert ) {
     const result = Enumerable.from([1,2,3,4,5]).skip(2).toArray();
     assert.deepEqual( result,[3,4,5], "Passed!" );
 });
+QUnit.test( "Enumerable.skipLast", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5]).skipLast(2).toArray();
+    assert.deepEqual( result,[1,2,3], "Passed!" );
+});
 QUnit.test( "Enumerable.skipWhile", function( assert ) {
     const result = Enumerable.from([1,2,3,2,1]).skipWhile(item=>item<3).toArray();
     assert.deepEqual( result,[3,2,1], "Passed!" );
@@ -334,6 +338,21 @@ QUnit.test( "Enumerable.sum numbers with some strings", function( assert ) {
 QUnit.test( "Enumerable.take", function( assert ) {
     const result = Enumerable.from([1,2,3,4,5]).take(2).toArray();
     assert.deepEqual( result,[1,2], "Passed!" );
+});
+QUnit.test( "Enumerable.takeLast array", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5]).takeLast(2).toArray();
+    assert.deepEqual( result,[4,5], "Passed!" );
+});
+QUnit.test( "Enumerable.takeLast generator", function( assert ) {
+    function* gen() {
+        yield 1;
+        yield 2;
+        yield 3;
+        yield 4;
+        yield 5;
+    }
+    const result = Enumerable.from(gen()).takeLast(2).toArray();
+    assert.deepEqual( result,[4,5], "Passed!" );
 });
 QUnit.test( "Enumerable.takeWhile", function( assert ) {
     const result = Enumerable.from([1,2,3,2,1]).takeWhile(item=>item<3).toArray();
