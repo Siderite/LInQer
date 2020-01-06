@@ -378,20 +378,20 @@
 		skipLast(nr) {
 			const gen = function* () {
 				const buffer = Array(nr);
-				let index=0;
-				let offset=0;
+				let index = 0;
+				let offset = 0;
 				for (const item of this) {
-					const value = buffer[index-offset];
-					buffer[index-offset] = item;
+					const value = buffer[index - offset];
+					buffer[index - offset] = item;
 					index++;
-					if (index-offset>=nr) {
-						offset+=nr;
+					if (index - offset >= nr) {
+						offset += nr;
 					}
-					if (index>nr) {
+					if (index > nr) {
 						yield value;
 					}
 				}
-				buffer.length=0;
+				buffer.length = 0;
 			}.bind(this);
 			return new Enumerable(gen());
 		},
@@ -436,7 +436,7 @@
 			const gen = this._canSeek
 				? function* () {
 					const length = this.count();
-					for (let index = length-nr; index<length; index++) {
+					for (let index = length - nr; index < length; index++) {
 						yield this.elementAt(index);
 					}
 				}
@@ -444,11 +444,11 @@
 					let index = 0;
 					const buffer = Array(nr);
 					for (const item of this) {
-						buffer[index%nr]=item;
+						buffer[index % nr] = item;
 						index++;
 					}
-					for (let i=0; i<nr && i<index; i++){
-						yield buffer[(index+i)%nr];
+					for (let i = 0; i < nr && i < index; i++) {
+						yield buffer[(index + i) % nr];
 					}
 				};
 			return new Enumerable(gen.bind(this)());
