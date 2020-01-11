@@ -1,0 +1,5 @@
+{
+    "es6-css-minify.hideButton": "auto",
+    "es6-css-minify.js.mangle": true,
+    "es6-css-minify.js.compress": true
+}
