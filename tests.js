@@ -242,7 +242,7 @@ QUnit.test( "Enumerable.orderBy", function( assert ) {
     assert.deepEqual( result,[0,1,2,3,4,5], "Passed!" );
 });
 QUnit.test( "Enumerable.orderBy custom comparer", function( assert ) {
-    const result = Enumerable.from([1,3,2,4,5,0]).orderBy((i1,i2)=>i1%2-i2%2).toArray();
+    const result = Enumerable.from([1,3,2,4,5,0]).orderBy(i=>i%2).toArray();
     assert.deepEqual( result,[2,4,0,1,3,5], "Passed!" );
 });
 QUnit.test( "Enumerable.orderByDescending", function( assert ) {

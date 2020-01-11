@@ -259,13 +259,23 @@
 			return new Enumerable(gen());
 		},
 		/// Sorts the elements of a sequence in ascending order.
-		orderBy(comparer) {
-			if (typeof comparer !== 'undefined') {
-				_ensureFunction(comparer);
+		orderBy(keySelector) {
+			if (typeof keySelector !== 'undefined') {
+				_ensureFunction(keySelector);
 			}
 			const gen = function* () {
 				const arr = _toArray(this._src);
-				arr.sort(comparer);
+				if (keySelector) {
+					arr.sort((i1,i2)=>{
+						const v1 = keySelector(i1);
+						const v2 = keySelector(i2);
+						if (v1>v2) return 1;
+						if (v1<v2) return -1;
+						return 0;
+					});
+				} else {
+					arr.sort();
+				}
 				for (const item of arr) {
 					yield item;
 				}
@@ -273,8 +283,8 @@
 			return new Enumerable(gen());
 		},
 		/// Sorts the elements of a sequence in descending order.
-		orderByDescending(comparer) {
-			return this.orderBy(comparer).reverse();
+		orderByDescending(keySelector) {
+			return this.orderBy(keySelector).reverse();
 		},
 		/// Adds a value to the beginning of the sequence.
 		prepend(item) {
@@ -467,11 +477,11 @@
 			}.bind(this);
 			return new Enumerable(gen());
 		},
-		thenBy(comparer) {
+		thenBy(keySelector) {
 			//TODO implement OrderedEnumerable?
 			throw new Error('thenBy not implemented for Javascript');
 		},
-		thenByDescending(comparer) {
+		thenByDescending(keySelector) {
 			//TODO implement OrderedEnumerable?
 			throw new Error('thenByDescending not implemented for Javascript');
 		},
