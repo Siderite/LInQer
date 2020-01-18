@@ -25,4 +25,4 @@ const result = enumerable
                 
 **Original Enumerable**
 
-The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet/api/system.linq.enumerable . Most of the methods are implemented, but not join. You can use that page as documentation to this.
+The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet/api/system.linq.enumerable .
