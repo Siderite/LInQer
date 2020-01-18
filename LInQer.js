@@ -1,9 +1,24 @@
 ({ Enumerable, EqualityComparer } = (function () {
 	/// wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
 	function Enumerable(src) {
-		_ensureIterable(src);
-		this._src = src;
+		if (!src) {
+			throw new Error('Only iterables or bound functions that return iterators are acceptable');
+		}
+		if (typeof src === 'function') {
+			if (src.hasOwnProperty('prototype')) {
+				throw new Error('Only iterables or bound functions that return iterators are acceptable');
+			}
+			this._src = src;
+			this._generator = src;
+		} else {
+			_ensureIterable(src);
+			this._src = src;
+			this._generator = src[Symbol.iterator].bind(src);
+		}
 		this._canSeek = false;
+		this._count = null;
+		this._tryGetAt = null;
+		this._wasIterated = false;
 	}
 	/// returns an empty Enumerable
 	Enumerable.empty = function () {
@@ -11,21 +26,21 @@
 	};
 	/// generates a sequence of integral numbers within a specified range.
 	Enumerable.range = function (start, count) {
-		const f = function* () {
+		const gen = function* () {
 			for (let i = 0; i < count; i++) {
 				yield start + i;
 			}
 		};
-		return new Enumerable(f());
+		return new Enumerable(gen.bind(this));
 	}
 	/// Generates a sequence that contains one repeated value.
 	Enumerable.repeat = function (item, count) {
-		const f = function* () {
+		const gen = function* () {
 			for (let i = 0; i < count; i++) {
 				yield item;
 			}
 		};
-		return new Enumerable(f());
+		return new Enumerable(gen.bind(this));
 	}
 	/// Wraps an iterable item into an Enumerable if it's not already one
 	Enumerable.from = function (iterable) {
@@ -33,10 +48,10 @@
 		return new Enumerable(iterable);
 	}
 	Enumerable.prototype = {
-		/// the Enumerable instance exposes the same iterator as the wrapped iterable
+		/// the Enumerable instance exposes the same iterator as the wrapped iterable or generator function 
 		[Symbol.iterator]() {
-			const iterator = this._src[Symbol.iterator].bind(this._src);
-			return iterator();
+			this._wasIterated = true;
+			return this._generator();
 		},
 		/// Applies an accumulator function over a sequence.
 		/// The specified seed value is used as the initial accumulator value, and the specified function is used to select the result value.
@@ -66,13 +81,34 @@
 		},
 		/// Computes the average of a sequence of numeric values.
 		average() {
-			return this.sum() / this.count();
+			const agg = {
+				count: 0
+			};
+			for(const item of this){
+				agg.sum = agg.count === 0
+					? _toNumber(item)
+					: agg.sum + _toNumber(item);
+				agg.count ++;
+			}
+			return agg.count == 0
+				? undefined
+				: agg.sum / agg.count;
 		},
+		/// Returns the same enumerable
 		asEnumerable() {
-			throw new Error('asEnumerable not implemented for Javascript');
+			return this;
 		},
-		cast() {
-			throw new Error('cast not implemented for Javascript');
+		/// Checks the elements of a sequence based on their type
+		/// If type is a string, it will check based on typeof, else it will use instanceof.
+		/// Throws if types are different.
+		cast(type) {
+			const f = typeof type === 'string'
+				? x => typeof x === type
+				: x => x instanceof type;
+			return this.where(item=>{
+				if (!f(item)) throw new Error(item+' not of type '+type);
+				return true;
+			});
 		},
 		/// Concatenates two sequences by appending iterable to the existing one.
 		concat(iterable) {
@@ -84,8 +120,8 @@
 				for (const item of iterable) {
 					yield item;
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Determines whether a sequence contains a specified element.
 		/// A custom function can be used to determine equality between elements.
@@ -101,20 +137,34 @@
 		defaultIfEmpty() {
 			throw new Error('defaultIfEmpty not implemented for Javascript');
 		},
-		/// Returns distinct elements from a sequence.
-		distinct() {
-			// TODO comparer function (probably a hashing function, rather than comparer)
-			const distinctValues = new Set();
-			const gen = function* () {
-				for (const item of this) {
-					const size = distinctValues.size;
-					distinctValues.add(item);
-					if (size < distinctValues.size) {
-						yield item;
+		/// Returns distinct elements from a sequence. WARNING: using a comparer makes this slower
+		distinct(equalityComparer = EqualityComparer.default) {
+			const gen = equalityComparer === EqualityComparer.default
+				? function* () {
+					const distinctValues = new Set();
+					for (const item of this) {
+						const size = distinctValues.size;
+						distinctValues.add(item);
+						if (size < distinctValues.size) {
+							yield item;
+						}
 					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+				: function* () {
+					const values = [];
+					for (const item of this) {
+						let unique = true;
+						for (const prevItem of values) {
+							if (equalityComparer(item,prevItem)) {
+								unique = false;
+								break;
+							}
+						}
+						if (unique) yield item;
+						values.push(item);
+					}
+				};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Returns the element at a specified index in a sequence.
 		elementAt(index) {
@@ -130,17 +180,30 @@
 			if (!result) return undefined;
 			return result.value;
 		},
-		/// Produces the set difference of two sequences
-		except(iterable) {
-			// TODO comparer function (probably a hashing function, rather than comparer)
+		/// Produces the set difference of two sequences WARNING: using the comparer is slower
+		except(iterable, equalityComparer = EqualityComparer.default) {
 			_ensureIterable(iterable);
-			const distinctValues = new Set(iterable);
-			const gen = function* () {
-				for (const item of this) {
-					if (!distinctValues.has(item)) yield item;
+			const gen = equalityComparer === EqualityComparer.default
+				? function* () {
+					const distinctValues = new Set(iterable);
+					for (const item of this) {
+						if (!distinctValues.has(item)) yield item;
+					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+				: function* () {
+					const values = _toArray(iterable);
+					for (const item of this) {
+						let unique = true;
+						for (const value of values) {
+							if (equalityComparer(item,value)) {
+								unique = false;
+								break;
+							}
+						}
+						if (unique) yield item;
+					}
+				};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Returns the first element of a sequence.
 		first() {
@@ -174,17 +237,30 @@
 		groupJoin() {
 			throw new Error('groupJoin not implemented for Javascript');
 		},
-		/// Produces the set intersection of two sequences.
-		intersect(iterable) {
-			// TODO comparer function (probably a hashing function, rather than comparer)
+		/// Produces the set intersection of two sequences. WARNING: using a comparer is slower
+		intersect(iterable, equalityComparer = EqualityComparer.default) {
 			_ensureIterable(iterable);
-			const distinctValues = new Set(iterable);
-			const gen = function* () {
-				for (const item of this) {
-					if (distinctValues.has(item)) yield item;
+			const gen = equalityComparer === EqualityComparer.default
+				? function* () {
+					const distinctValues = new Set(iterable);
+					for (const item of this) {
+						if (distinctValues.has(item)) yield item;
+					}
 				}
-			}.bind(this);
-			return new Enumerable(gen()).distinct();
+				: function* () {
+					const values = _toArray(iterable);
+					for (const item of this) {
+						let unique = true;
+						for (const value of values) {
+							if (equalityComparer(item, value)) {
+								unique= false;
+								break;
+							}
+						}
+						if (!unique) yield item;
+					}
+				};
+			return new Enumerable(gen.bind(this));
 		},
 		join() {
 			// TODO implement this?
@@ -201,6 +277,7 @@
 					found = true;
 				}
 				if (found) return result;
+				throw new Error('The enumeration is empty');
 			}
 			const count = this.count();
 			return this.elementAt(count - 1);
@@ -229,7 +306,9 @@
 				_ensureFunction(comparer);
 			} else {
 				// TODO find a solution for comparison between numbers and strings
-				comparer = (item1, item2) => item1 > item2 ? 1 : (item1 < item2 ? -1 : 0);
+				comparer = (item1, item2) => item1 > item2 
+					? 1 
+					: (item1 < item2 ? -1 : 0);
 			}
 			return this.aggregate(undefined, (acc, item) => acc === undefined || comparer(item, acc) > 0 ? item : acc);
 		},
@@ -240,23 +319,19 @@
 				_ensureFunction(comparer);
 			} else {
 				// TODO find a solution for comparison between numbers and strings
-				comparer = (item1, item2) => item1 > item2 ? 1 : (item1 < item2 ? -1 : 0);
+				comparer = (item1, item2) => item1 > item2 
+					? 1 
+					: (item1 < item2 ? -1 : 0);
 			}
 			return this.aggregate(undefined, (acc, item) => acc === undefined || comparer(item, acc) < 0 ? item : acc);
 		},
 		/// Filters the elements of a sequence based on their type
 		/// If type is a string, it will filter based on typeof, else it will use instanceof
 		ofType(type) {
-			// TODO check the utility of this method
 			const f = typeof type === 'string'
 				? x => typeof x === type
 				: x => x instanceof type;
-			const gen = function* () {
-				for (const item of this) {
-					if (f(item)) yield item;
-				}
-			}.bind(this);
-			return new Enumerable(gen());
+			return this.where(f);
 		},
 		/// Sorts the elements of a sequence in ascending order.
 		orderBy(keySelector) {
@@ -264,7 +339,7 @@
 				_ensureFunction(keySelector);
 			}
 			const gen = function* () {
-				const arr = _toArray(this._src);
+				const arr = _toArray(this);
 				if (keySelector) {
 					arr.sort((i1,i2)=>{
 						const v1 = keySelector(i1);
@@ -279,8 +354,8 @@
 				for (const item of arr) {
 					yield item;
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Sorts the elements of a sequence in descending order.
 		orderByDescending(keySelector) {
@@ -293,20 +368,20 @@
 		/// Inverts the order of the elements in a sequence.
 		reverse() {
 			_ensureInternalTryGetAt(this);
-			const gen = !this._canSeek
+			const gen = this._canSeek
 				? function* () {
-					const arr = _toArray(this._src);
-					for (let index = arr.length - 1; index >= 0; index--) {
-						yield arr[index];
-					}
-				}
-				: function* () {
 					const length = this.count();
 					for (let index = length - 1; index >= 0; index--) {
 						yield this.elementAt(index);
 					}
+				}
+				: function* () {
+					const arr = _toArray(this);
+					for (let index = arr.length - 1; index >= 0; index--) {
+						yield arr[index];
+					}
 				};
-			return new Enumerable(gen.bind(this)());
+			return new Enumerable(gen.bind(this));
 		},
 		/// Projects each element of a sequence into a new form.
 		select(op) {
@@ -315,8 +390,8 @@
 				for (const item of this) {
 					yield op(item);
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Projects each element of a sequence to an iterable and flattens the resulting sequences into one sequence.
 		selectMany(op) {
@@ -332,8 +407,8 @@
 						yield child;
 					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Determines whether two sequences are equal and in the same order according to an equality comparer.
 		sequenceEqual(iterable, equalityComparer = EqualityComparer.default) {
@@ -374,36 +449,38 @@
 		/// Bypasses a specified number of elements in a sequence and then returns the remaining elements.
 		skip(nr) {
 			const gen = function* () {
+				let nrLeft = nr;
 				for (const item of this) {
-					if (nr > 0) {
-						nr--;
+					if (nrLeft > 0) {
+						nrLeft--;
 					} else {
 						yield item;
 					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
 		skipLast(nr) {
 			const gen = function* () {
-				const buffer = Array(nr);
+				let nrLeft = nr;
+				const buffer = Array(nrLeft);
 				let index = 0;
 				let offset = 0;
 				for (const item of this) {
 					const value = buffer[index - offset];
 					buffer[index - offset] = item;
 					index++;
-					if (index - offset >= nr) {
-						offset += nr;
+					if (index - offset >= nrLeft) {
+						offset += nrLeft;
 					}
-					if (index > nr) {
+					if (index > nrLeft) {
 						yield value;
 					}
 				}
 				buffer.length = 0;
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
 		skipWhile(condition) {
@@ -418,50 +495,64 @@
 						yield item;
 					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Computes the sum of a sequence of numeric values.
 		sum() {
-			return this.aggregate(undefined, (acc, item) => acc === undefined ? _toNumber(item) : _toNumber(acc) + _toNumber(item));
+			const agg = {
+				count: 0
+			};
+			for(const item of this){
+				agg.sum = agg.count === 0
+					? _toNumber(item)
+					: agg.sum + _toNumber(item);
+				agg.count ++;
+			}
+			return agg.count == 0
+				? undefined
+				: agg.sum;
 		},
 		/// Returns a specified number of contiguous elements from the start of a sequence.
 		take(nr) {
 			const gen = function* () {
+				let nrLeft = nr;
 				for (const item of this) {
-					if (nr > 0) {
+					if (nrLeft > 0) {
 						yield item;
-						nr--;
+						nrLeft--;
 					}
-					if (nr <= 0) {
+					if (nrLeft <= 0) {
 						break;
 					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Returns a new enumerable collection that contains the last nr elements from source.
 		takeLast(nr) {
 			_ensureInternalTryGetAt(this);
 			const gen = this._canSeek
 				? function* () {
+					let nrLeft = nr;
 					const length = this.count();
-					for (let index = length - nr; index < length; index++) {
+					for (let index = length - nrLeft; index < length; index++) {
 						yield this.elementAt(index);
 					}
 				}
 				: function* () {
+					let nrLeft = nr;
 					let index = 0;
-					const buffer = Array(nr);
+					const buffer = Array(nrLeft);
 					for (const item of this) {
-						buffer[index % nr] = item;
+						buffer[index % nrLeft] = item;
 						index++;
 					}
-					for (let i = 0; i < nr && i < index; i++) {
-						yield buffer[(index + i) % nr];
+					for (let i = 0; i < nrLeft && i < index; i++) {
+						yield buffer[(index + i) % nrLeft];
 					}
 				};
-			return new Enumerable(gen.bind(this)());
+			return new Enumerable(gen.bind(this));
 		},
 		/// Returns elements from a sequence as long as a specified condition is true, and then skips the remaining elements.
 		takeWhile(condition) {
@@ -474,8 +565,8 @@
 						break;
 					}
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		thenBy(keySelector) {
 			//TODO implement OrderedEnumerable?
@@ -525,10 +616,10 @@
 			return result;
 		},
 		toList() {
-			throw new Error('toList not implemented for Javascript');
+			throw new Error('use toArray instead of toList');
 		},
 		toLookup() {
-			throw new Error('toLookup not implemented for Javascript');
+			throw new Error('use toObject instead of toLookup');
 		},
 		/// Produces the set union of two sequences.
 		union(iterable) {
@@ -540,19 +631,22 @@
 		where(op) {
 			_ensureFunction(op);
 			const gen = function* () {
+				let index = 0;
 				for (const item of this) {
-					if (op(item)) {
+					if (op(item, index)) {
 						yield item;
 					}
+					index++;
 				}
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Applies a specified function to the corresponding elements of two sequences, producing a sequence of the results.
 		zip(iterable, zipper) {
 			_ensureIterable(iterable);
 			_ensureFunction(zipper);
 			const gen = function* () {
+				let index = 0;
 				const iterator1 = this[Symbol.iterator]();
 				const iterator2 = iterable[Symbol.iterator]();
 				let done = false;
@@ -561,11 +655,12 @@
 					const val2 = iterator2.next();
 					done = val1.done || val2.done;
 					if (!done) {
-						yield zipper(val1.value, val2.value);
+						yield zipper(val1.value, val2.value, index);
 					}
+					index++;
 				} while (!done);
-			}.bind(this);
-			return new Enumerable(gen());
+			};
+			return new Enumerable(gen.bind(this));
 		}
 	};
 
@@ -596,7 +691,7 @@
 		}
 		enumerable._count = () => {
 			let x = 0;
-			for (const item of enumerable._src) x++;
+			for (const item of enumerable) x++;
 			return x;
 		};
 	}
@@ -634,7 +729,7 @@
 		// TODO other specialized types? objects, maps, sets?
 		enumerable._tryGetAt = index => {
 			let x = 0;
-			for (const item of enumerable._src) {
+			for (const item of enumerable) {
 				if (index === x) return { value: item };
 				x++;
 			}

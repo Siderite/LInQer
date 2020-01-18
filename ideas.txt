@@ -1,0 +1,12 @@
+1. can we improve the quality of the result by parsing the entire tree of queries, then combining them?
+    - ex: for orderBy(...).take(k) 
+2. is there a way to propagate the count operation forward? 
+    - someArray.select or orderBy will always have the same length as someArray
+    - somethingWithCountN.take(k) will have length min(k,n)
+    - in some cases, the original iterable need not be iterated at all
+3. a shuffle feature that would return random items from the original iterable in an iterator way
+    - create an array of the iterable O(n), then take one random item from the array above the index 0 and move it to index, then yield it. continue by increasing the index
+4. there is no check that the original iterable has not changed
+    - cloning the iterable would defeat the purpose of LInQer
+    - there is no way to check if the iterable has been changed externally except in poor ways like checking length if it applies
+    - Javascript is supposed to be threadsafe

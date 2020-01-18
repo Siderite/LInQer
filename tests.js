@@ -89,6 +89,10 @@ QUnit.test( "Enumerable.append", function( assert ) {
     assert.deepEqual( result,[1,2,3,4], "Passed!" );
 });
 
+QUnit.test( "Enumerable.average empty", function( assert ) {
+    const result = Enumerable.from([]).average();
+    assert.deepEqual( result,undefined, "Passed!" );
+});
 QUnit.test( "Enumerable.average numbers", function( assert ) {
     const result = Enumerable.from([1,2,3]).average();
     assert.deepEqual( result,2, "Passed!" );
@@ -140,6 +144,10 @@ QUnit.test( "Enumerable.distinct", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).distinct().toArray();
     assert.deepEqual( result,[1,2,3,'3'], "Passed!" );
 });
+QUnit.test( "Enumerable.distinct equality comparer", function( assert ) {
+    const result = Enumerable.from([1,2,2,3,'3']).distinct((i1,i2)=>+(i1) === +(i2)).toArray();
+    assert.deepEqual( result,[1,2,3], "Passed!" );
+});
 
 QUnit.test( "Enumerable.elementAt in range array", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).elementAt(3);
@@ -168,10 +176,17 @@ QUnit.test( "Enumerable.except", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).except([2,3]).toArray();
     assert.deepEqual( result,[1,'3'], "Passed!" );
 });
+QUnit.test( "Enumerable.except equality comparer", function( assert ) {
+    const result = Enumerable.from([1,2,2,3,'3']).except([2,3],(i1,i2)=>+(i1) === +(i2)).toArray();
+    assert.deepEqual( result,[1], "Passed!" );
+});
 
 QUnit.test( "Enumerable.first", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).first();
     assert.deepEqual( result,1, "Passed!" );
+});
+QUnit.test( "Enumerable.first empty", function( assert ) {
+    assert.throws(()=>Enumerable.from([]).first(), "Passed!" );
 });
 QUnit.test( "Enumerable.firstOrDefault", function( assert ) {
     const result = Enumerable.from([]).firstOrDefault();
@@ -188,12 +203,19 @@ QUnit.test( "Enumerable.groupBy", function( assert ) {
 
 QUnit.test( "Enumerable.intersect", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).intersect([2,3,4]).toArray();
-    assert.deepEqual( result,[2,3], "Passed!" );
+    assert.deepEqual( result,[2,2,3], "Passed!" );
+});
+QUnit.test( "Enumerable.intersect equality comparer", function( assert ) {
+    const result = Enumerable.from([1,2,2,3,'3']).intersect([2,3,4],(i1,i2)=>+i1 === +i2).toArray();
+    assert.deepEqual( result,[2,2,3,'3'], "Passed!" );
 });
 
 QUnit.test( "Enumerable.last", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).last();
     assert.deepEqual( result,'3', "Passed!" );
+});
+QUnit.test( "Enumerable.last empty", function( assert ) {
+    assert.throws(()=>Enumerable.from([]).last(), "Passed!" );
 });
 QUnit.test( "Enumerable.lastOrDefault", function( assert ) {
     const result = Enumerable.from([]).lastOrDefault();
@@ -381,11 +403,42 @@ QUnit.test( "Enumerable.where", function( assert ) {
     const result = Enumerable.from([1,2,3,4,5]).where(item=>item%2).toArray();
     assert.deepEqual( result,[1,3,5], "Passed!" );
 });
+QUnit.test( "Enumerable.where with index", function( assert ) {
+    const idxs=[];
+    const result = Enumerable.from([1,2,3,4,5]).where((item,index)=>{
+        idxs.push(index);
+        return item%2;
+    }).toArray();
+    assert.deepEqual( result,[1,3,5], "Passed!" );
+    assert.deepEqual( idxs,[0,1,2,3,4], "Passed!" );
+});
 
 QUnit.test( "Enumerable.zip", function( assert ) {
     const result = Enumerable.from([1,2,3,4]).zip(['a','b','c'],(i1,i2)=>i2+' '+i1).toArray();
     assert.deepEqual( result,['a 1','b 2','c 3'], "Passed!" );
 });
+QUnit.test( "Enumerable.zip with index", function( assert ) {
+    const idxs=[];
+    const result = Enumerable.from([1,2,3,4]).zip(['a','b','c'],(i1,i2,index)=>{
+        idxs.push(index);
+        return i2+' '+i1;
+    }).toArray();
+    assert.deepEqual( result,['a 1','b 2','c 3'], "Passed!" );
+    assert.deepEqual( idxs,[0, 1, 2], "Passed!" );
+});
+
+// repeat tests
+QUnit.test( "Enumerable.range repeat", function( assert ) {
+    const result = Enumerable.range(1,3);
+    assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
+    assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
+});
+QUnit.test( "Enumerable.take repeat", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5,6,7,8,9]).take(3);
+    assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
+    assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
+});
+
 
 // performace tests
 
