@@ -438,7 +438,71 @@ QUnit.test( "Enumerable.take repeat", function( assert ) {
     assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
     assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
 });
+QUnit.test( "Enumerable.take repeat", function( assert ) {
+    const result = Enumerable.from([3,2,1]).reverse();
+    assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
+    assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
+});
 
+// composable count tests
+
+QUnit.test( "Enumerable.empty count", function( assert ) {
+    const result = Enumerable.empty();
+    assert.deepEqual( result.elementAtOrDefault(1), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "Enumerable.repeat count", function( assert ) {
+    const result = Enumerable.repeat(100,1000000000);
+    assert.deepEqual( result.elementAtOrDefault(12345), 100, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "Enumerable.range count", function( assert ) {
+    const result = Enumerable.range(100,1000000000);
+    assert.deepEqual( result.elementAtOrDefault(12345), 12445, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "Enumerable.concat count", function( assert ) {
+    const result = Enumerable.range(100,10000).concat(Enumerable.repeat(10,20000));
+    assert.deepEqual( result.count(), 30000, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "Enumerable.concat count", function( assert ) {
+    const iterable = Enumerable.from(function*(){ yield 1; })
+    const result = Enumerable.range(100,10000).concat(iterable);
+    assert.deepEqual( result.count(), 10001, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+    assert.deepEqual( iterable._wasIterated, true, "Passed!" );
+});
+QUnit.test( "orderBy count", function( assert ) {
+    const result = Enumerable.range(100,10000).orderBy(i=>i+1);
+    assert.deepEqual( result.count(), 10000, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "reverse count", function( assert ) {
+    const result = Enumerable.range(100,10000).reverse();
+    assert.deepEqual( result.count(), 10000, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "skip count", function( assert ) {
+    const result = Enumerable.range(100,10000).skip(5);
+    assert.deepEqual( result.count(), 9995, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "skipLast count", function( assert ) {
+    const result = Enumerable.range(100,10000).skipLast(5);
+    assert.deepEqual( result.count(), 9995, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "take count", function( assert ) {
+    const result = Enumerable.range(100,10000).take(5);
+    assert.deepEqual( result.count(), 5, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "takeLast count", function( assert ) {
+    const result = Enumerable.range(100,10000).takeLast(5);
+    assert.deepEqual( result.count(), 5, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
 
 // performace tests
 
@@ -446,7 +510,7 @@ QUnit.test( "Use only items that are required - standard", function( assert ) {
     const largeArray = Array(10000000).fill(10);
     const startTime = performance.now();
     const someCalculation = largeArray.filter(x=>x===10).map(x=>'v'+x).slice(100,110);
-    console.log(someCalculation);
+    Array.from(someCalculation);
     const endTime = performance.now();
     assert.ok(true,'Standard array use took '+(endTime-startTime)+'milliseconds');
 });
@@ -455,7 +519,7 @@ QUnit.test( "Use only items that are required - Enumerable", function( assert ) 
     const largeArray = Array(10000000).fill(10);
     const startTime = performance.now();
     const someCalculation = Enumerable.from(largeArray).where(x=>x===10).select(x=>'v'+x).skip(100).take(10).toArray();
-    console.log(someCalculation);
+    Array.from(someCalculation);
     const endTime = performance.now();
     assert.ok(true,'Enumerable use took '+(endTime-startTime)+'milliseconds');
 });

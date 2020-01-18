@@ -5,9 +5,6 @@
 			throw new Error('Only iterables or bound functions that return iterators are acceptable');
 		}
 		if (typeof src === 'function') {
-			if (src.hasOwnProperty('prototype')) {
-				throw new Error('Only iterables or bound functions that return iterators are acceptable');
-			}
 			this._src = src;
 			this._generator = src;
 		} else {
@@ -22,7 +19,10 @@
 	}
 	/// returns an empty Enumerable
 	Enumerable.empty = function () {
-		return new Enumerable([]);
+		const result = new Enumerable([]);
+		result._count = () => 0;
+		result._tryGetAt = index => null;
+		return result;
 	};
 	/// generates a sequence of integral numbers within a specified range.
 	Enumerable.range = function (start, count) {
@@ -31,7 +31,13 @@
 				yield start + i;
 			}
 		};
-		return new Enumerable(gen.bind(this));
+		const result = new Enumerable(gen.bind(this));
+		result._count = () => count;
+		result._tryGetAt = index => {
+			if (index>=0 && index<count) return { value: start+index };
+			return null;
+		};
+		return result;
 	}
 	/// Generates a sequence that contains one repeated value.
 	Enumerable.repeat = function (item, count) {
@@ -40,7 +46,13 @@
 				yield item;
 			}
 		};
-		return new Enumerable(gen.bind(this));
+		const result = new Enumerable(gen.bind(this));
+		result._count = () => count;
+		result._tryGetAt = index => {
+			if (index>=0 && index<count) return { value: item };
+			return null;
+		};
+		return result;
 	}
 	/// Wraps an iterable item into an Enumerable if it's not already one
 	Enumerable.from = function (iterable) {
@@ -121,7 +133,13 @@
 					yield item;
 				}
 			};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			const self = this;
+			result._count = () => {
+				const other = new Enumerable(iterable);
+				return self.count()+other.count();
+			};
+			return result;
 		},
 		/// Determines whether a sequence contains a specified element.
 		/// A custom function can be used to determine equality between elements.
@@ -355,7 +373,10 @@
 					yield item;
 				}
 			};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			_ensureInternalCount(this);
+			result._count = this._count;
+			return result;
 		},
 		/// Sorts the elements of a sequence in descending order.
 		orderByDescending(keySelector) {
@@ -381,7 +402,10 @@
 						yield arr[index];
 					}
 				};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			_ensureInternalCount(this);
+			result._count = this._count;
+			return result;
 		},
 		/// Projects each element of a sequence into a new form.
 		select(op) {
@@ -391,7 +415,10 @@
 					yield op(item);
 				}
 			};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			_ensureInternalCount(this);
+			result._count = this._count;
+			return result;
 		},
 		/// Projects each element of a sequence to an iterable and flattens the resulting sequences into one sequence.
 		selectMany(op) {
@@ -458,7 +485,10 @@
 					}
 				}
 			};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			const self = this;
+			result._count = ()=>Math.max(0,self.count()-nr);
+			return result;
 		},
 		/// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
 		skipLast(nr) {
@@ -480,7 +510,10 @@
 				}
 				buffer.length = 0;
 			};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			const self = this;
+			result._count = ()=>Math.max(0,self.count()-nr);
+			return result;
 		},
 		/// Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
 		skipWhile(condition) {
@@ -527,7 +560,10 @@
 					}
 				}
 			};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			const self = this;
+			result._count = ()=>Math.min(nr,self.count());
+			return result;
 		},
 		/// Returns a new enumerable collection that contains the last nr elements from source.
 		takeLast(nr) {
@@ -552,7 +588,10 @@
 						yield buffer[(index + i) % nrLeft];
 					}
 				};
-			return new Enumerable(gen.bind(this));
+			const result = new Enumerable(gen.bind(this));
+			const self = this;
+			result._count = ()=>Math.min(nr,self.count());
+			return result;
 		},
 		/// Returns elements from a sequence as long as a specified condition is true, and then skips the remaining elements.
 		takeWhile(condition) {
