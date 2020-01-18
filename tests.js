@@ -428,6 +428,27 @@ QUnit.test( "Enumerable.zip with index", function( assert ) {
     assert.deepEqual( idxs,[0, 1, 2], "Passed!" );
 });
 
+// OrderedEnumerable tests
+
+QUnit.test( "OrderedEnumerable.thenBy", function( assert ) {
+    const result = Enumerable.from([1,2,3,4]).orderBy(i=>i%2==0).thenBy(i=>-i).toArray();
+    assert.deepEqual( result,[3,1,4,2], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable.thenByDescending", function( assert ) {
+    const result = Enumerable.from([1,2,3,4]).orderByDescending(i=>i%2==0).thenByDescending(i=>-i).toArray();
+    assert.deepEqual( result,[2,4,1,3], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select", function( assert ) {
+    const result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3'])
+                    .orderBy(i=>0)
+                    .thenByDescending(i=>i.charAt(1))
+                    .thenBy(i=>i.charAt(0)=='b')
+                    .select(i=>'x'+i)
+                    .toArray();
+    assert.deepEqual( result,['xa3','xc3','xa2','xb2','xa1','xc1','xb1'], "Passed!" );
+});
+
+
 // repeat tests
 QUnit.test( "Enumerable.range repeat", function( assert ) {
     const result = Enumerable.range(1,3);
@@ -505,7 +526,7 @@ QUnit.test( "takeLast count", function( assert ) {
     assert.deepEqual( result._wasIterated, false, "Passed!" );
 });
 
-// performace tests
+// performance tests
 
 // change this to .test if you want to compare the standard use with LInQer
 QUnit.skip( "Use only items that are required - standard", function( assert ) {

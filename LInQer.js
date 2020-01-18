@@ -355,34 +355,21 @@
 		},
 		/// Sorts the elements of a sequence in ascending order.
 		orderBy(keySelector) {
-			if (typeof keySelector !== 'undefined') {
+			if (keySelector) {
 				_ensureFunction(keySelector);
+			} else {
+				keySelector = item => item;
 			}
-			const gen = function* () {
-				const arr = _toArray(this);
-				if (keySelector) {
-					arr.sort((i1,i2)=>{
-						const v1 = keySelector(i1);
-						const v2 = keySelector(i2);
-						if (v1>v2) return 1;
-						if (v1<v2) return -1;
-						return 0;
-					});
-				} else {
-					arr.sort();
-				}
-				for (const item of arr) {
-					yield item;
-				}
-			};
-			const result = new Enumerable(gen.bind(this));
-			_ensureInternalCount(this);
-			result._count = this._count;
-			return result;
+			return new OrderedEnumerable(this,keySelector, true);
 		},
 		/// Sorts the elements of a sequence in descending order.
 		orderByDescending(keySelector) {
-			return this.orderBy(keySelector).reverse();
+			if (keySelector) {
+				_ensureFunction(keySelector);
+			} else {
+				keySelector = item => item;
+			}
+			return new OrderedEnumerable(this,keySelector, false);
 		},
 		/// Adds a value to the beginning of the sequence.
 		prepend(item) {
@@ -609,14 +596,6 @@
 			};
 			return new Enumerable(gen.bind(this));
 		},
-		thenBy(keySelector) {
-			//TODO implement OrderedEnumerable?
-			throw new Error('thenBy not implemented for Javascript');
-		},
-		thenByDescending(keySelector) {
-			//TODO implement OrderedEnumerable?
-			throw new Error('thenByDescending not implemented for Javascript');
-		},
 		/// creates an array from an Enumerable
 		toArray() {
 			return Array.from(this);
@@ -704,6 +683,42 @@
 			return new Enumerable(gen.bind(this));
 		}
 	};
+
+	function OrderedEnumerable(enumerable, keySelector, ascending) {
+		this._src = enumerable;
+		this._canSeek = false;
+		this._count = null;
+		this._tryGetAt = null;
+		this._wasIterated = false;
+		this._keySelectors=[{keySelector:keySelector,ascending:ascending}];
+		this._generator = function* () {
+			const arr = _toArray(this._src);
+			arr.sort((i1,i2)=>{
+				for (const selector of this._keySelectors) {
+					const v1 = selector.keySelector(i1);
+					const v2 = selector.keySelector(i2);
+					if (v1>v2) return selector.ascending ? 1 : -1;
+					if (v1<v2) return selector.ascending ? -1 : 1;
+				}
+				return 0;
+			});
+			for (const item of arr) {
+				yield item;
+			}
+		};
+		this._count = this._src.count.bind(this._src);
+	}
+	OrderedEnumerable.prototype ={
+		thenBy(keySelector) {
+			this._keySelectors.push({keySelector:keySelector,ascending:true});
+			return this;
+		},
+		thenByDescending(keySelector) {
+			this._keySelectors.push({keySelector:keySelector,ascending:false});
+			return this;
+		}
+	};
+	Object.setPrototypeOf(OrderedEnumerable.prototype, Enumerable.prototype);
 
 	function _ensureIterable(src) {
 		if (!src || !src[Symbol.iterator]) throw new Error('the argument must be iterable!');
