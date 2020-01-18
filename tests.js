@@ -684,3 +684,37 @@ QUnit.test( "OrderBy take performance", function( assert ) {
     endTime = performance.now();
     assert.deepEqual(result,[9989999, 9989998, 9989997],'Order all '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
 });
+
+// Extra features
+QUnit.module('Extra features');
+
+QUnit.test( "Enumerable.shuffle", function( assert ) {
+    const result = Enumerable.range(1,10).shuffle();
+    assert.deepEqual(result._wasIterated, false,'Passed!');
+    const arr = result.toArray();
+    assert.deepEqual(result._wasIterated, true,'Passed!');
+    assert.notDeepEqual(arr, Enumerable.range(1,10).toArray(),'Passed!');
+});
+
+QUnit.test( "Enumerable.binarySearch", function( assert ) {
+    const result = Enumerable.range(1,10).select(i=>i*10).orderBy();
+    assert.deepEqual(result._wasIterated, false,'Passed!');
+    let index = result.binarySearch(80);
+    assert.deepEqual(result._wasIterated, true,'Passed!');
+    assert.deepEqual(index, 7,'Passed!');
+    index = result.binarySearch(45);
+    assert.deepEqual(index, false,'Passed!');
+});
+
+QUnit.test( "Enumerable.distinctByHash", function( assert ) {
+    const result = Enumerable.from([1,2,2,3,'3']).distinctByHash(i=>+i).toArray();
+    assert.deepEqual( result,[1,2,3], "Passed!" );
+});
+QUnit.test( "Enumerable.exceptByHash", function( assert ) {
+    const result = Enumerable.from([1,2,2,3,'3']).exceptByHash([2,3],i=>+i).toArray();
+    assert.deepEqual( result,[1], "Passed!" );
+});
+QUnit.test( "Enumerable.intersectByHash", function( assert ) {
+    const result = Enumerable.from([1,2,2,3,'3']).intersectByHash([2,3],i=>+i).toArray();
+    assert.deepEqual( result,[2,2,3,'3'], "Passed!" );
+});

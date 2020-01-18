@@ -1,4 +1,0 @@
-1. can we improve the quality of the result by parsing the entire tree of queries, then combining them?
-    - ex: for orderBy(...).take(k) 
-3. a shuffle feature that would return random items from the original iterable in an iterator way
-    - create an array of the iterable O(n), then take one random item from the array above the index 0 and move it to index, then yield it. continue by increasing the index

@@ -42,7 +42,7 @@
 			if (index>=0 && index<count) return { value: start+index };
 			return null;
 		};
-		return result;
+		return new OrderedEnumerable(result);
 	}
 	/// Generates a sequence that contains one repeated value.
 	Enumerable.repeat = function (item, count) {
@@ -57,7 +57,7 @@
 			if (index>=0 && index<count) return { value: item };
 			return null;
 		};
-		return result;
+		return new OrderedEnumerable(result);
 	}
 	/// Wraps an iterable item into an Enumerable if it's not already one
 	Enumerable.from = function (iterable) {
@@ -684,17 +684,21 @@
 			throw new Error('use toArray instead of toList');
 		},
 		toLookup() {
-			throw new Error('use toObject instead of toLookup');
+			throw new Error('use groupBy instead of toLookup');
 		},
 		/// Produces the set union of two sequences.
 		union(iterable, equalityComparer = EqualityComparer.default) {
 			_ensureIterable(iterable);
 			return this.concat(iterable).distinct(equalityComparer);
 		},
-		useQuicksort() {
+		/// use QuickSort for ordering (default)
+		/// allows optimizations for take, skip, takeLast, skipLast
+		useQuickSort() {
 			this._useQuickSort = true;
 			return this;
 		},
+		/// use the default browser sort implementation for ordering
+		/// this may be faster for small arrays
 		useBrowserSort() {
 			this._useQuickSort = false;
 			return this;
@@ -736,6 +740,7 @@
 		}
 	};
 
+	/// an Enumerable that accepts a chain of key selectors by which to order
 	function OrderedEnumerable(enumerable, keySelector, ascending) {
 		this._src = enumerable;
 		this._canSeek = false;
@@ -800,26 +805,32 @@
 		};
 	}
 	OrderedEnumerable.prototype ={
+		/// Performs a subsequent ordering of the elements in a sequence in ascending order.
 		thenBy(keySelector) {
 			this._keySelectors.push({keySelector:keySelector,ascending:true});
 			return this;
 		},
+		/// Performs a subsequent ordering of the elements in a sequence in descending order.
 		thenByDescending(keySelector) {
 			this._keySelectors.push({keySelector:keySelector,ascending:false});
 			return this;
 		},
+		/// Deferred and optimized implementation of take
 		take(nr) {
 			this._restrictions.push({type:'take',nr:nr});
 			return this;
 		},
+		/// Deferred and optimized implementation of takeLast
 		takeLast(nr) {
 			this._restrictions.push({type:'takeLast',nr:nr});
 			return this;
 		},
+		/// Deferred and optimized implementation of skip
 		skip(nr) {
 			this._restrictions.push({type:'skip',nr:nr});
 			return this;
 		},
+		/// Deferred and optimized implementation of skipLast
 		skipLast(nr) {
 			this._restrictions.push({type:'skipLast',nr:nr});
 			return this;
