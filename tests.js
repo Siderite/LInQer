@@ -202,6 +202,37 @@ QUnit.test( "Enumerable.groupBy", function( assert ) {
     assert.deepEqual( result[1].toArray(),[3,'3','0x4'], "Passed!" );
 });
 
+
+QUnit.test( "Enumerable.groupJoin", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,37])
+                        .groupJoin([10,12,331,13,56,3,22,57,43,467,212],i=>i+'',i=>(i+'').charAt(0),(i1,i2)=>{
+                            return {i1:i1,i2:i2};
+                        })
+                        .toArray();
+    assert.deepEqual(result, [
+        { 'i1': 1, 'i2': [10, 12, 13] }, 
+        { 'i1': 2, 'i2': [22, 212] }, 
+        { 'i1': 3, 'i2': [331, 3] }, 
+        { 'i1': 4, 'i2': [43, 467] },
+        { 'i1': 37, 'i2': [] }
+    ], "Passed!");
+});
+QUnit.test( "Enumerable.groupJoin equality comparer", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,37])
+                        .groupJoin([10,12,331,13,56,3,22,57,43,467,212],i=>i,i=>i,(i1,i2)=>{
+                            return {i1:i1,i2:i2};
+                        },(i1,i2)=>i2%i1===0)
+                        .toArray();
+    assert.deepEqual(result, [
+        { 'i1': 1, 'i2': [10, 12, 331, 13, 56, 3, 22, 57, 43, 467, 212] }, 
+        { 'i1': 2, 'i2': [10, 12, 56, 22, 212] }, 
+        { 'i1': 3, 'i2': [12, 3, 57] }, 
+        { 'i1': 4, 'i2': [12, 56, 212] },
+        { 'i1': 37, 'i2': [] }
+    ], "Passed!");
+});
+
+
 QUnit.test( "Enumerable.intersect", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).intersect([2,3,4]).toArray();
     assert.deepEqual( result,[2,2,3], "Passed!" );
@@ -210,6 +241,30 @@ QUnit.test( "Enumerable.intersect equality comparer", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).intersect([2,3,4],(i1,i2)=>+i1 === +i2).toArray();
     assert.deepEqual( result,[2,2,3,'3'], "Passed!" );
 });
+
+QUnit.test( "Enumerable.join", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,37])
+                        .join([10,12,331,13,56,3,22,57,43,467,212],i=>i+'',i=>(i+'').charAt(0),(i1,i2)=>i1+':'+i2)
+                        .toArray();
+    assert.deepEqual(result, [
+        '1:10', '1:12', '1:13', 
+        '2:22', '2:212', 
+        '3:331', '3:3', 
+        '4:43', '4:467'
+    ], "Passed!");
+});
+QUnit.test( "Enumerable.join equality comparer", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,37])
+                        .join([10,12,331,13,56,3,22,57,43,467,212],i=>i,i=>i,(i1,i2)=>i1+':'+i2,(i1,i2)=>i2%i1===0)
+                        .toArray();
+    assert.deepEqual(result, [
+        '1:10', '1:12', '1:331', '1:13', '1:56', '1:3', '1:22', '1:57', '1:43', '1:467', '1:212',
+        '2:10', '2:12', '2:56', '2:22', '2:212', 
+        '3:12', '3:3', '3:57', 
+        '4:12', '4:56', '4:212'
+    ], "Passed!");
+});
+
 
 QUnit.test( "Enumerable.last", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).last();
@@ -398,6 +453,10 @@ QUnit.test( "Enumerable.toSet", function( assert ) {
 QUnit.test( "Enumerable.union", function( assert ) {
     const result = Enumerable.from([1,1,2]).union([3,2]).toArray();
     assert.deepEqual( result,[1,2,3], "Passed!" );
+});
+QUnit.test( "Enumerable.union equality comparer", function( assert ) {
+    const result = Enumerable.from([11,12,26]).union([31,23],(i1,i2)=>(i1+'').charAt(0)===(i2+'').charAt(0)).toArray();
+    assert.deepEqual( result,[11,26,31], "Passed!" );
 });
 
 QUnit.test( "Enumerable.where", function( assert ) {

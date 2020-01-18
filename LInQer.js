@@ -254,8 +254,31 @@
 			const result = new Enumerable(gen.bind(this));
 			return result;
 		},
-		groupJoin() {
-			throw new Error('groupJoin not implemented for Javascript');
+		/// Correlates the elements of two sequences based on key equality and groups the results. A specified equalityComparer is used to compare keys.
+		/// WARNING: using the equality comparer will be slower
+		groupJoin(iterable, innerKeySelector, outerKeySelector, resultSelector, equalityComparer = EqualityComparer.default) {
+			const gen = equalityComparer === EqualityComparer.default
+				? function*() {
+					const lookup = new Enumerable(iterable)
+						.groupBy(outerKeySelector)
+						.toMap(g=>g.key,g=>g);
+					for(const innerItem of this) {
+						const arr = _toArray(lookup.get(innerKeySelector(innerItem)));
+						yield resultSelector(innerItem, arr);
+					}
+				}
+				: function*() {
+					for (const innerItem of this) {
+						const arr = [];
+						for (const outerItem of iterable) {
+							if (equalityComparer(innerKeySelector(innerItem),outerKeySelector(outerItem))) {
+								arr.push(outerItem);
+							}
+						}
+						yield resultSelector(innerItem, arr);
+					}
+				};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Produces the set intersection of two sequences. WARNING: using a comparer is slower
 		intersect(iterable, equalityComparer = EqualityComparer.default) {
@@ -282,9 +305,33 @@
 				};
 			return new Enumerable(gen.bind(this));
 		},
-		join() {
-			// TODO implement this?
-			throw new Error('join is not implemented for Javascript')
+		/// Correlates the elements of two sequences based on matching keys.
+		/// WARNING: using the equality comparer will be slower
+		join(iterable, innerKeySelector, outerKeySelector, resultSelector, equalityComparer = EqualityComparer.default) {
+			const gen = equalityComparer === EqualityComparer.default
+				? function*() {
+					const lookup = new Enumerable(iterable)
+						.groupBy(outerKeySelector)
+						.toMap(g=>g.key,g=>g);
+					for(const innerItem of this) {
+						const group = lookup.get(innerKeySelector(innerItem));
+						if (group) {
+							for(const outerItem of group) {
+								yield resultSelector(innerItem, outerItem);
+							}
+						}
+					}
+				}
+				: function*() {
+					for (const innerItem of this) {
+						for (const outerItem of iterable) {
+							if (equalityComparer(innerKeySelector(innerItem),outerKeySelector(outerItem))) {
+								yield resultSelector(innerItem, outerItem);
+							}
+						}
+					}
+				};
+			return new Enumerable(gen.bind(this));
 		},
 		/// Returns the last element of a sequence.
 		last() {
@@ -325,10 +372,11 @@
 			if (typeof comparer !== 'undefined') {
 				_ensureFunction(comparer);
 			} else {
-				// TODO find a solution for comparison between numbers and strings
-				comparer = (item1, item2) => item1 > item2 
-					? 1 
-					: (item1 < item2 ? -1 : 0);
+				comparer = (item1, item2) => {
+					if (item1 > item2) return 1;
+					if (item1 < item2) return -1;
+					return 0;
+				};
 			}
 			return this.aggregate(undefined, (acc, item) => acc === undefined || comparer(item, acc) > 0 ? item : acc);
 		},
@@ -338,10 +386,11 @@
 			if (typeof comparer !== 'undefined') {
 				_ensureFunction(comparer);
 			} else {
-				// TODO find a solution for comparison between numbers and strings
-				comparer = (item1, item2) => item1 > item2 
-					? 1 
-					: (item1 < item2 ? -1 : 0);
+				comparer = (item1, item2) => {
+					if (item1 > item2) return 1;
+					if (item1 < item2) return -1;
+					return 0;
+				};
 			}
 			return this.aggregate(undefined, (acc, item) => acc === undefined || comparer(item, acc) < 0 ? item : acc);
 		},
@@ -628,7 +677,6 @@
 		},
 		/// creates a set from an enumerable
 		toSet() {
-			// TODO comparer function (probably a hashing function, rather than comparer)
 			const result = new Set();
 			for (const item of this) {
 				result.add(item);
@@ -642,10 +690,9 @@
 			throw new Error('use toObject instead of toLookup');
 		},
 		/// Produces the set union of two sequences.
-		union(iterable) {
-			// TODO comparer function (probably a hashing function, rather than comparer)
+		union(iterable, equalityComparer = EqualityComparer.default) {
 			_ensureIterable(iterable);
-			return this.concat(iterable).distinct();
+			return this.concat(iterable).distinct(equalityComparer);
 		},
 		/// Filters a sequence of values based on a predicate.
 		where(op) {
@@ -732,6 +779,7 @@
 			: Number.NaN;
 	}
 	function _toArray(enumerable) {
+		if (!enumerable) return [];
 		if (Array.isArray(enumerable)) return enumerable;
 		return Array.from(enumerable);
 	}
