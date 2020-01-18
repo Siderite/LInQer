@@ -194,11 +194,12 @@ QUnit.test( "Enumerable.firstOrDefault", function( assert ) {
 });
 
 QUnit.test( "Enumerable.groupBy", function( assert ) {
-    const result = Enumerable.from([1,2,2,3,'3','sasa','0x4']).groupBy(item=>+(item)>2);
-    assert.deepEqual( result.keys,[false,true], "Passed!" );
-    assert.deepEqual( result[true],[3,'3','0x4'], "Passed!" );
-    assert.deepEqual( result[false],[1,2,2,'sasa'], "Passed!" );
-    assert.deepEqual( result.toArray(),[[false,[1,2,2,'sasa']],[true,[3,'3','0x4']]], "Passed!" );
+    const result = Enumerable.from([1,2,2,3,'3','sasa','0x4']).groupBy(item=>+(item)>2).toArray();
+    assert.deepEqual( result.length,2, "Passed!" );
+    assert.deepEqual( result[0].key,false, "Passed!" );
+    assert.deepEqual( result[0].toArray(),[1,2,2,'sasa'], "Passed!" );
+    assert.deepEqual( result[1].key,true, "Passed!" );
+    assert.deepEqual( result[1].toArray(),[3,'3','0x4'], "Passed!" );
 });
 
 QUnit.test( "Enumerable.intersect", function( assert ) {
@@ -506,7 +507,8 @@ QUnit.test( "takeLast count", function( assert ) {
 
 // performace tests
 
-QUnit.test( "Use only items that are required - standard", function( assert ) {
+// change this to .test if you want to compare the standard use with LInQer
+QUnit.skip( "Use only items that are required - standard", function( assert ) {
     const largeArray = Array(10000000).fill(10);
     const startTime = performance.now();
     const someCalculation = largeArray.filter(x=>x===10).map(x=>'v'+x).slice(100,110);

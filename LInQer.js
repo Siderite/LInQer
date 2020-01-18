@@ -234,23 +234,25 @@
 		/// Groups the elements of a sequence.
 		groupBy(keySelector) {
 			_ensureFunction(keySelector);
-			const result = new Map();
-			for (const item of this) {
-				const key = keySelector(item);
-				const arr = result.get(key);
-				if (arr) {
-					arr.push(item);
-				} else {
-					result.set(key, [item]);
+			const gen = function* () {
+				const groupMap = new Map();
+				for (const item of this) {
+					const key = keySelector(item);
+					const group = groupMap.get(key);
+					if (group) {
+						group.push(item);
+					} else {
+						groupMap.set(key, [item]);
+					}
 				}
-			}
-			const enumerable = new Enumerable(result);
-			// TODO check the keys do not contain 'keys' and whatever members Enumerable has
-			for (const pair of result) {
-				enumerable[pair[0]] = pair[1];
-			}
-			enumerable.keys = Array.from(result.keys());
-			return enumerable;
+				for (const pair of groupMap) {
+					const group = new Enumerable(pair[1]);
+					group.key = pair[0];
+					yield group;
+				}
+			};
+			const result = new Enumerable(gen.bind(this));
+			return result;
 		},
 		groupJoin() {
 			throw new Error('groupJoin not implemented for Javascript');
