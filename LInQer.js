@@ -1,4 +1,5 @@
-({ Enumerable, EqualityComparer } = (function () {
+({ Enumerable, OrderedEnumerable, EqualityComparer } = (function () {
+
 	/// wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
 	function Enumerable(src) {
 		if (!src) {
@@ -11,6 +12,10 @@
 			_ensureIterable(src);
 			this._src = src;
 			this._generator = src[Symbol.iterator].bind(src);
+		}
+		this._useQuickSort = true;
+		if (typeof src._useQuickSort !== 'undefined') {
+			this._useQuickSort = src._useQuickSort;
 		}
 		this._canSeek = false;
 		this._count = null;
@@ -372,11 +377,7 @@
 			if (typeof comparer !== 'undefined') {
 				_ensureFunction(comparer);
 			} else {
-				comparer = (item1, item2) => {
-					if (item1 > item2) return 1;
-					if (item1 < item2) return -1;
-					return 0;
-				};
+				comparer = _defaultComparer;
 			}
 			return this.aggregate(undefined, (acc, item) => acc === undefined || comparer(item, acc) > 0 ? item : acc);
 		},
@@ -386,11 +387,7 @@
 			if (typeof comparer !== 'undefined') {
 				_ensureFunction(comparer);
 			} else {
-				comparer = (item1, item2) => {
-					if (item1 > item2) return 1;
-					if (item1 < item2) return -1;
-					return 0;
-				};
+				comparer = _defaultComparer;
 			}
 			return this.aggregate(undefined, (acc, item) => acc === undefined || comparer(item, acc) < 0 ? item : acc);
 		},
@@ -694,6 +691,14 @@
 			_ensureIterable(iterable);
 			return this.concat(iterable).distinct(equalityComparer);
 		},
+		useQuicksort() {
+			this._useQuickSort = true;
+			return this;
+		},
+		useBrowserSort() {
+			this._useQuickSort = false;
+			return this;
+		},
 		/// Filters a sequence of values based on a predicate.
 		where(op) {
 			_ensureFunction(op);
@@ -737,23 +742,62 @@
 		this._count = null;
 		this._tryGetAt = null;
 		this._wasIterated = false;
-		this._keySelectors=[{keySelector:keySelector,ascending:ascending}];
+		this._keySelectors=[];
+		this._restrictions = [];
+		if (keySelector) {
+			this._keySelectors.push({keySelector:keySelector,ascending:ascending});
+		}
+		this._useQuickSort = true;
+		if (typeof enumerable._useQuickSort !== 'undefined') {
+			this._useQuickSort = enumerable._useQuickSort;
+		}
 		this._generator = function* () {
 			const arr = _toArray(this._src);
-			arr.sort((i1,i2)=>{
-				for (const selector of this._keySelectors) {
-					const v1 = selector.keySelector(i1);
-					const v2 = selector.keySelector(i2);
-					if (v1>v2) return selector.ascending ? 1 : -1;
-					if (v1<v2) return selector.ascending ? -1 : 1;
+			let startIndex = 0;
+			let endIndex = arr.length;
+			for (var restriction of this._restrictions) {
+				switch(restriction.type) {
+					case 'take':
+						endIndex = Math.min(endIndex, startIndex+restriction.nr);
+						break;
+					case 'skip':
+						startIndex = Math.min(endIndex, startIndex+restriction.nr);
+						break;
+					case 'takeLast':
+						startIndex = Math.max(startIndex, endIndex-restriction.nr);
+						break;
+					case 'skipLast':
+						endIndex = Math.max(startIndex, endIndex-restriction.nr);
+						break;
 				}
-				return 0;
-			});
-			for (const item of arr) {
-				yield item;
+			}
+			if (startIndex<endIndex) {
+				const sort = this._useQuickSort
+					? (a,c) => _quickSort(a,0,a.length-1,c,startIndex,endIndex)
+					: (a,c) => a.sort(c);
+				sort(arr, (i1,i2)=>{
+					for (const selector of this._keySelectors) {
+						const v1 = selector.keySelector(i1);
+						const v2 = selector.keySelector(i2);
+						if (v1>v2) return selector.ascending ? 1 : -1;
+						if (v1<v2) return selector.ascending ? -1 : 1;
+					}
+					return 0;
+				});
+				for (let index=startIndex; index<endIndex; index++) {
+					yield arr[index];
+				}
 			}
 		};
-		this._count = this._src.count.bind(this._src);
+		const self = this;
+		this._count = ()=>{
+			if (self._restrictions.length) {
+				self._count = null;
+				_ensureInternalCount(self);
+				return self._count();
+			}
+			return self._src.count.call(self._src);
+		};
 	}
 	OrderedEnumerable.prototype ={
 		thenBy(keySelector) {
@@ -762,6 +806,22 @@
 		},
 		thenByDescending(keySelector) {
 			this._keySelectors.push({keySelector:keySelector,ascending:false});
+			return this;
+		},
+		take(nr) {
+			this._restrictions.push({type:'take',nr:nr});
+			return this;
+		},
+		takeLast(nr) {
+			this._restrictions.push({type:'takeLast',nr:nr});
+			return this;
+		},
+		skip(nr) {
+			this._restrictions.push({type:'skip',nr:nr});
+			return this;
+		},
+		skipLast(nr) {
+			this._restrictions.push({type:'skipLast',nr:nr});
 			return this;
 		}
 	};
@@ -840,10 +900,54 @@
 			return null;
 		}
 	}
+	function _defaultComparer(item1, item2) {
+		if (item1 > item2) return 1;
+		if (item1 < item2) return -1;
+		return 0;
+	}
+	function _swapArrayItems(array, leftIndex, rightIndex){
+		const temp = array[leftIndex];
+		array[leftIndex] = array[rightIndex];
+		array[rightIndex] = temp;
+	}
+	function _partition(items, left, right, comparer) {
+		const pivot   = items[(right + left) >> 1]; //middle element
+		let    i       = left; //left pointer
+		let    j       = right; //right pointer
+		while (i <= j) {
+			while (comparer(items[i], pivot)<0) {
+				i++;
+			}
+			while (comparer(items[j], pivot)>0) {
+				j--;
+			}
+			if (i <= j) {
+				_swapArrayItems(items, i, j);
+				i++;
+				j--;
+			}
+		}
+		return i;
+	}
+	function _quickSort(items, left, right, comparer=_defaultComparer, minIndex=0, maxIndex=Number.MAX_SAFE_INTEGER) {
+		if (!items.length) return items;
+	
+		const index = _partition(items, left, right, comparer); //index returned from partition
+		if (left < index - 1 && index>=minIndex) { //more elements on the left side of the pivot
+			_quickSort(items, left, index - 1, comparer, minIndex, maxIndex);
+		}
+		if (index < right && index<=maxIndex) { //more elements on the right side of the pivot
+			_quickSort(items, index, right, comparer, minIndex, maxIndex);
+		}
+		
+		return items;
+	}
 
+	/// default equality comparers
 	const EqualityComparer = {
 		default: (item1, item2) => item1 == item2,
 		exact: (item1, item2) => item1 === item2,
-	}
-	return { Enumerable, EqualityComparer };
+	};
+
+	return { Enumerable, OrderedEnumerable, EqualityComparer};
 })());

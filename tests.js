@@ -1,4 +1,5 @@
 // object and method tests
+QUnit.module('object and method tests');
 
 QUnit.test( "Enumerable.from with empty array", function( assert ) {
     const enumerable = Enumerable.from([]);
@@ -321,7 +322,16 @@ QUnit.test( "Enumerable.orderBy", function( assert ) {
 });
 QUnit.test( "Enumerable.orderBy custom comparer", function( assert ) {
     const result = Enumerable.from([1,3,2,4,5,0]).orderBy(i=>i%2).toArray();
+    //assert.deepEqual( result,[2,4,0,1,3,5], "Passed!" );
+    assert.deepEqual( result,[4,2,0,5,1,3], "Passed!" );
+});
+QUnit.test( "Enumerable.orderBy custom comparer browser sort", function( assert ) {
+    const result = Enumerable.from([1,3,2,4,5,0])
+        .useBrowserSort()
+        .orderBy(i=>i%2)
+        .toArray();
     assert.deepEqual( result,[2,4,0,1,3,5], "Passed!" );
+    //assert.deepEqual( result,[4,2,0,5,1,3], "Passed!" );
 });
 QUnit.test( "Enumerable.orderByDescending", function( assert ) {
     const result = Enumerable.from([1,3,2,4,5,0]).orderByDescending().toArray();
@@ -488,6 +498,7 @@ QUnit.test( "Enumerable.zip with index", function( assert ) {
 });
 
 // OrderedEnumerable tests
+QUnit.module('OrderedEnumerable tests');
 
 QUnit.test( "OrderedEnumerable.thenBy", function( assert ) {
     const result = Enumerable.from([1,2,3,4]).orderBy(i=>i%2==0).thenBy(i=>-i).toArray();
@@ -504,11 +515,48 @@ QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select", function
                     .thenBy(i=>i.charAt(0)=='b')
                     .select(i=>'x'+i)
                     .toArray();
+    //assert.deepEqual( result,['xa3','xc3','xa2','xb2','xa1','xc1','xb1'], "Passed!" );
+    assert.deepEqual( result,['xa3','xc3','xa2','xb2','xc1','xa1','xb1'], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select default sort", function( assert ) {
+    const result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3'])
+                    .useBrowserSort()
+                    .orderBy(i=>0)
+                    .thenByDescending(i=>i.charAt(1))
+                    .thenBy(i=>i.charAt(0)=='b')
+                    .select(i=>'x'+i)
+                    .toArray();
     assert.deepEqual( result,['xa3','xc3','xa2','xb2','xa1','xc1','xb1'], "Passed!" );
+    //assert.deepEqual( result,['xa3','xc3','xa2','xb2','xc1','xa1','xb1'], "Passed!" );
+});
+
+QUnit.test( "OrderedEnumerable then take", function( assert ) {
+    const result = Enumerable.from([3,2,1,4]).orderBy().take(2).toArray();
+    assert.deepEqual( result,[1,2], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable then skip", function( assert ) {
+    const result = Enumerable.from([3,2,1,4]).orderBy().skip(2).toArray();
+    assert.deepEqual( result,[3,4], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable then takeLast", function( assert ) {
+    const result = Enumerable.from([3,2,1,4]).orderBy().takeLast(2).toArray();
+    assert.deepEqual( result,[3,4], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable then skipLast", function( assert ) {
+    const result = Enumerable.from([3,2,1,4]).orderBy().take(2).toArray();
+    assert.deepEqual( result,[1,2], "Passed!" );
+});
+QUnit.test( "OrderedEnumerable with multiple restrictions", function( assert ) {
+    const result = Enumerable.from([3,2,1,4,6,5,9,8,7,0]).orderBy().skip(2).take(7).skipLast(3).takeLast(2);
+    assert.deepEqual(result._wasIterated,false,"Passed!");
+    const arr = result.toArray();
+    assert.deepEqual( arr,[4,5], "Passed!" );
 });
 
 
 // repeat tests
+QUnit.module('repeat tests');
+
 QUnit.test( "Enumerable.range repeat", function( assert ) {
     const result = Enumerable.range(1,3);
     assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
@@ -525,7 +573,9 @@ QUnit.test( "Enumerable.take repeat", function( assert ) {
     assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
 });
 
+
 // composable count tests
+QUnit.module('composable count tests');
 
 QUnit.test( "Enumerable.empty count", function( assert ) {
     const result = Enumerable.empty();
@@ -584,11 +634,21 @@ QUnit.test( "takeLast count", function( assert ) {
     assert.deepEqual( result.count(), 5, "Passed!" );
     assert.deepEqual( result._wasIterated, false, "Passed!" );
 });
+QUnit.test( "OrderedEnumerable with multiple restrictions count", function( assert ) {
+    let result = Enumerable.from([3,2,1,4,6,5,9,8,7,0]).orderBy();
+    assert.deepEqual(result._wasIterated,false,"Passed!");
+    assert.deepEqual(result.count(),10,"Passed!");
+    assert.deepEqual(result._wasIterated,false,"Passed!");
+    result = result.skip(2).take(7).skipLast(3).takeLast(2);
+    assert.deepEqual(result._wasIterated,false,"Passed!");
+    assert.deepEqual(result.count(),2,"Passed!");
+    assert.deepEqual(result._wasIterated,true,"Passed!");
+});
 
 // performance tests
+QUnit.module('performance tests');
 
-// change this to .test if you want to compare the standard use with LInQer
-QUnit.skip( "Use only items that are required - standard", function( assert ) {
+QUnit.test( "Use only items that are required - standard", function( assert ) {
     const largeArray = Array(10000000).fill(10);
     const startTime = performance.now();
     const someCalculation = largeArray.filter(x=>x===10).map(x=>'v'+x).slice(100,110);
@@ -604,4 +664,23 @@ QUnit.test( "Use only items that are required - Enumerable", function( assert ) 
     Array.from(someCalculation);
     const endTime = performance.now();
     assert.ok(true,'Enumerable use took '+(endTime-startTime)+'milliseconds');
+});
+
+QUnit.test( "OrderBy take performance", function( assert ) {
+    const size = 10000000;
+    const largeArray1 = Array(size);
+    const largeArray2 = Array(size);
+    for (var i=0; i<size; i++) {
+        largeArray1[i]=(i%2)*size/2+Math.floor(i/2);
+        largeArray2[i]=(i%2)*size/2+Math.floor(i/2);
+    }
+    let startTime = performance.now();
+    let result = Enumerable.from(largeArray1).orderBy(i=>size-i).skip(10000).take(3).toArray();
+    let endTime = performance.now();
+    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
+    startTime = performance.now();
+    const arr = Enumerable.from(largeArray2).orderBy(i=>size-i).toArray();
+    result = Enumerable.from(arr).skip(10000).take(3).toArray();
+    endTime = performance.now();
+    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order all '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
 });
