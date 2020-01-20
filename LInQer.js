@@ -17,9 +17,6 @@
 		if (typeof src._useQuickSort !== 'undefined') {
 			this._useQuickSort = src._useQuickSort;
 		}
-		if (typeof src._forceQuickSort !== 'undefined') {
-			this._forceQuickSort = src._forceQuickSort;
-		}
 		this._canSeek = false;
 		this._count = null;
 		this._tryGetAt = null;
@@ -146,10 +143,16 @@
 			};
 			const result = new Enumerable(gen.bind(this));
 			const self = this;
-			result._count = () => {
-				const other = new Enumerable(iterable);
-				return self.count()+other.count();
-			};
+			const other = Enumerable.from(iterable);
+			result._count = () => self.count() + other.count();
+			_ensureInternalTryGetAt(this);
+			_ensureInternalTryGetAt(other);
+			result._canSeek = self._canSeek && other._canSeek;
+			if (self._canSeek) {
+				result._tryGetAt = index => {
+					return self._tryGetAt(index) || other._tryGetAt(index - self.count());
+				};
+			}
 			return result;
 		},
 		/// Determines whether a sequence contains a specified element.
@@ -446,6 +449,11 @@
 			const result = new Enumerable(gen.bind(this));
 			_ensureInternalCount(this);
 			result._count = this._count;
+			_ensureInternalTryGetAt(this);
+			if (this._canSeek) {
+				const self = this;
+				result._tryGetAt = index => self._tryGetAt(self.count() - index - 1);
+			}
 			return result;
 		},
 		/// Projects each element of a sequence into a new form.
@@ -459,6 +467,14 @@
 			const result = new Enumerable(gen.bind(this));
 			_ensureInternalCount(this);
 			result._count = this._count;
+			const self = this;
+			_ensureInternalTryGetAt(self);
+			result._canSeek = self._canSeek;
+			result._tryGetAt = index => {
+				const res = self._tryGetAt(index);
+				if (!res) return res;
+				return { value: op(res.value) };
+			};
 			return result;
 		},
 		/// Projects each element of a sequence to an iterable and flattens the resulting sequences into one sequence.
@@ -528,7 +544,10 @@
 			};
 			const result = new Enumerable(gen.bind(this));
 			const self = this;
-			result._count = ()=>Math.max(0,self.count()-nr);
+			result._count = () => Math.max(0, self.count() - nr);
+			_ensureInternalTryGetAt(this);
+			result._canSeek = this._canSeek;
+			result._tryGetAt = index => self._tryGetAt(index + nr);
 			return result;
 		},
 		/// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
@@ -554,6 +573,14 @@
 			const result = new Enumerable(gen.bind(this));
 			const self = this;
 			result._count = ()=>Math.max(0,self.count()-nr);
+			_ensureInternalTryGetAt(this);
+			result._canSeek = this._canSeek;
+			if (this._canSeek) {
+				result._tryGetAt = index => {
+					if (index>=result.count()) return null;
+					return self._tryGetAt(index);
+				}
+			}
 			return result;
 		},
 		/// Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
@@ -604,6 +631,14 @@
 			const result = new Enumerable(gen.bind(this));
 			const self = this;
 			result._count = ()=>Math.min(nr,self.count());
+			_ensureInternalTryGetAt(this);
+			result._canSeek = self._canSeek;
+			if (self._canSeek) {
+				result._tryGetAt = index => {
+					if (index>=nr) return null;
+					return self._tryGetAt(index);
+				};
+			}
 			return result;
 		},
 		/// Returns a new enumerable collection that contains the last nr elements from source.
@@ -631,7 +666,14 @@
 				};
 			const result = new Enumerable(gen.bind(this));
 			const self = this;
-			result._count = ()=>Math.min(nr,self.count());
+			result._count = () => Math.min(nr, self.count());
+			result._canSeek = self._canSeek;
+			if (self._canSeek) {
+				result._tryGetAt = index => {
+					if (index < 0 || index >= result.count()) return null;
+					return self._tryGetAt(self.count() - nr + index);
+				};
+			}
 			return result;
 		},
 		/// Returns elements from a sequence as long as a specified condition is true, and then skips the remaining elements.
@@ -761,9 +803,6 @@
 		if (typeof enumerable._useQuickSort !== 'undefined') {
 			this._useQuickSort = enumerable._useQuickSort;
 		}
-		if (typeof enumerable._forceQuickSort !== 'undefined') {
-			this._forceQuickSort = enumerable._forceQuickSort;
-		}
 		this._generator = function* () {
 			const arr = Array.from(this._src);
 			let startIndex = 0;
@@ -786,8 +825,7 @@
 			}
 			if (startIndex<endIndex) {
 				// only use QuickSort as an optimization for take, skip, takeLast, skipLast
-				// _forceQuickSort forces it to be used at all times, used internally
-				const sort = this._useQuickSort && (this._forceQuickSort || this._restrictions.length)
+				const sort = this._useQuickSort && this._restrictions.length
 					? (a,c) => _quickSort(a,0,a.length-1,c,startIndex,endIndex)
 					: (a,c) => a.sort(c);
 				sort(arr, (i1,i2)=>{
@@ -866,7 +904,7 @@
 	}
 	function _ensureInternalCount(enumerable) {
 		if (enumerable._count) return;
-		if (typeof enumerable._src.length === 'number') {
+		if (typeof enumerable._src !== 'function' && typeof enumerable._src.length === 'number') {
 			enumerable._count = () => enumerable._src.length;
 			return;
 		}
@@ -882,7 +920,7 @@
 	}
 	function _ensureInternalTryGetAt(enumerable) {
 		if (enumerable._tryGetAt) return;
-		this._canSeek = true;
+		enumerable._canSeek = true;
 		if (typeof enumerable._src === 'string') {
 			enumerable._tryGetAt = index => {
 				if (index < enumerable._src.length) {
@@ -901,7 +939,7 @@
 			};
 			return;
 		}
-		if (typeof enumerable._src.length === 'number') {
+		if (typeof enumerable._src !== 'function' && typeof enumerable._src.length === 'number') {
 			enumerable._tryGetAt = index => {
 				if (index < enumerable._src.length && typeof enumerable._src[index] !== 'undefined') {
 					return { value: enumerable._src[index] };
@@ -910,7 +948,7 @@
 			};
 			return;
 		}
-		this._canSeek = false;
+		enumerable._canSeek = false;
 		// TODO other specialized types? objects, maps, sets?
 		enumerable._tryGetAt = index => {
 			let x = 0;

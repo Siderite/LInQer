@@ -16,7 +16,7 @@ const result = enumerable
                 .where(item=>!!item.value) // like filter
                 .select(item=>{ value: item.value, key: item.name }) // like map
                 .groupBy(item=>item.key)
-                .where(g=>g[1].length>10)
+                .where(g=>g.length>10)
                 .selectMany()
                 .skip(15)
                 .take(5)
