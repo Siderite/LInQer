@@ -714,43 +714,6 @@ QUnit.test( "OrderBy take performance random", function( assert ) {
     }
 });
 
-/*QUnit.test( "OrderBy take performance random", function( assert ) {
-    const size = 10000000;
-    const largeArray1 = Enumerable.range(1,size).shuffle().toArray();
-    const largeArray2 = Array.from(largeArray1);
-    let startTime = performance.now();
-    let result = Enumerable.from(largeArray1.sort()).skip(10000).take(3).toArray();
-    let endTime = performance.now();
-    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
-    startTime = performance.now();
-    const arr = Enumerable.from(largeArray2).orderBy(i=>size-i).toArray();
-    result = Enumerable.from(arr).skip(10000).take(3).toArray();
-    endTime = performance.now();
-    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order all '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
-});
-
-QUnit.test( "OrderBy take performance same value", function( assert ) {
-    const size = 10000000;
-    const largeArray1 = Array(size);
-    const largeArray2 = Array(size);
-    for (var i=0; i<size; i++) {
-        const value = 5;
-        largeArray1[i]=value;
-        largeArray2[i]=value;
-    }
-    let startTime = performance.now();
-    let result = Enumerable.from(largeArray1).orderBy(i=>size-i).skip(10000).take(3).toArray();
-    let endTime = performance.now();
-    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
-    startTime = performance.now();
-    const arr = Enumerable.from(largeArray2).orderBy(i=>size-i).toArray();
-    result = Enumerable.from(arr).skip(10000).take(3).toArray();
-    endTime = performance.now();
-    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order all '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
-});
-*/
-
-
 // Extra features
 QUnit.module('Extra features');
 

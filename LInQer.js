@@ -30,6 +30,7 @@
 		const result = new Enumerable([]);
 		result._count = () => 0;
 		result._tryGetAt = index => null;
+		result._canSeek = true;
 		return result;
 	};
 	/// generates a sequence of integral numbers within a specified range.
@@ -45,6 +46,7 @@
 			if (index>=0 && index<count) return { value: start+index };
 			return null;
 		};
+		result._canSeek = true;
 		return result;
 	}
 	/// Generates a sequence that contains one repeated value.
@@ -60,6 +62,7 @@
 			if (index>=0 && index<count) return { value: item };
 			return null;
 		};
+		result._canSeek = true;
 		return result;
 	}
 	/// Wraps an iterable item into an Enumerable if it's not already one
@@ -762,7 +765,7 @@
 			this._forceQuickSort = enumerable._forceQuickSort;
 		}
 		this._generator = function* () {
-			const arr = _toArray(this._src);
+			const arr = Array.from(this._src);
 			let startIndex = 0;
 			let endIndex = arr.length;
 			for (var restriction of this._restrictions) {
