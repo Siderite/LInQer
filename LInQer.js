@@ -944,10 +944,10 @@
 		if (!items.length) return items;
 	
 		const index = _partition(items, left, right, comparer); //index returned from partition
-		if (left < index - 1 && index>=minIndex) { //more elements on the left side of the pivot
+		if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
 			_quickSort(items, left, index - 1, comparer, minIndex, maxIndex);
 		}
-		if (index < right && index<=maxIndex) { //more elements on the right side of the pivot
+		if (index < right && index < maxIndex) { //more elements on the right side of the pivot
 			_quickSort(items, index, right, comparer, minIndex, maxIndex);
 		}
 		
