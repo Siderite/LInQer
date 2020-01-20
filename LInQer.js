@@ -42,7 +42,7 @@
 			if (index>=0 && index<count) return { value: start+index };
 			return null;
 		};
-		return new OrderedEnumerable(result);
+		return result;
 	}
 	/// Generates a sequence that contains one repeated value.
 	Enumerable.repeat = function (item, count) {
@@ -57,7 +57,7 @@
 			if (index>=0 && index<count) return { value: item };
 			return null;
 		};
-		return new OrderedEnumerable(result);
+		return result;
 	}
 	/// Wraps an iterable item into an Enumerable if it's not already one
 	Enumerable.from = function (iterable) {

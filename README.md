@@ -5,7 +5,7 @@ Array functions in Javascript create a new array for each operation, which is te
 
 More details on the blog post for it: https://siderite.dev/blog/linq-in-javascript-linqer/. Leave comments there or add Issues here in order to get features or bug fixes or whatever.
 
-Find it hosted on GitHub Pages and use it freely in your projects at: https://siderite.github.io/BlogHostedFiles/LInQer-min.js
+Find it hosted on GitHub Pages and use it freely in your projects at: https://siderite.github.io/LInQer/LInQer.min.js and https://siderite.github.io/LInQer/LInQer.extra.min.js .
 
 **Usage**
 
@@ -25,4 +25,4 @@ const result = enumerable
                 
 **Original Enumerable**
 
-The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet/api/system.linq.enumerable . Most of the methods are implemented, but not join. You can use that page as documentation to this.
+The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet/api/system.linq.enumerable .
