@@ -922,23 +922,23 @@
 		array[rightIndex] = temp;
 	}
 	function _partition(items, left, right, comparer) {
-		const pivot   = items[(right + left) >> 1]; //middle element
-		let    i       = left; //left pointer
-		let    j       = right; //right pointer
-		while (i <= j) {
-			while (comparer(items[i], pivot)<0) {
-				i++;
+		const pivot   = items[(right + left) >> 1];
+		while (left <= right) {
+			while (comparer(items[left], pivot)<0) {
+				left++;
 			}
-			while (comparer(items[j], pivot)>0) {
-				j--;
+			while (comparer(items[right], pivot)>0) {
+				right--;
 			}
-			if (i <= j) {
-				_swapArrayItems(items, i, j);
-				i++;
-				j--;
+			if (left < right) {
+				_swapArrayItems(items, left, right);
+				left++;
+				right--;
+			} else {
+				return left+1;
 			}
 		}
-		return i;
+		return left;
 	}
 	function _quickSort(items, left, right, comparer=_defaultComparer, minIndex=0, maxIndex=Number.MAX_SAFE_INTEGER) {
 		if (!items.length) return items;
