@@ -320,9 +320,10 @@ QUnit.test( "Enumerable.orderBy", function( assert ) {
     const result = Enumerable.from([1,3,2,4,5,0]).orderBy().toArray();
     assert.deepEqual( result,[0,1,2,3,4,5], "Passed!" );
 });
-QUnit.test( "Enumerable.orderBy custom comparer", function( assert ) {
-    const result = Enumerable.from([1,3,2,4,5,0]).orderBy(i=>i%2).toArray();
-    //assert.deepEqual( result,[2,4,0,1,3,5], "Passed!" );
+QUnit.test( "Enumerable.orderBy custom comparer forced QuickSort", function( assert ) {
+    let result = Enumerable.from([1,3,2,4,5,0]);
+    result._forceQuickSort = true;
+    result = result.orderBy(i=>i%2).toArray();
     assert.deepEqual( result,[4,2,0,5,1,3], "Passed!" );
 });
 QUnit.test( "Enumerable.orderBy custom comparer browser sort", function( assert ) {
@@ -508,14 +509,15 @@ QUnit.test( "OrderedEnumerable.thenByDescending", function( assert ) {
     const result = Enumerable.from([1,2,3,4]).orderByDescending(i=>i%2==0).thenByDescending(i=>-i).toArray();
     assert.deepEqual( result,[2,4,1,3], "Passed!" );
 });
-QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select", function( assert ) {
-    const result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3'])
+QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select forced QuickSort", function( assert ) {
+    let result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3']);
+    result._forceQuickSort = true;
+    result = result
                     .orderBy(i=>0)
                     .thenByDescending(i=>i.charAt(1))
                     .thenBy(i=>i.charAt(0)=='b')
                     .select(i=>'x'+i)
                     .toArray();
-    //assert.deepEqual( result,['xa3','xc3','xa2','xb2','xa1','xc1','xb1'], "Passed!" );
     assert.deepEqual( result,['xa3','xc3','xa2','xb2','xc1','xa1','xb1'], "Passed!" );
 });
 QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select default sort", function( assert ) {
@@ -666,13 +668,75 @@ QUnit.test( "Use only items that are required - Enumerable", function( assert ) 
     assert.ok(true,'Enumerable use took '+(endTime-startTime)+'milliseconds');
 });
 
-QUnit.test( "OrderBy take performance", function( assert ) {
+QUnit.test( "OrderBy performance random", function( assert ) {
+    const size = 10000000;
+    const largeArray1 = Enumerable.range(1,size).shuffle().toArray();
+    const largeArray2 = Array.from(largeArray1);
+
+    let startTime = performance.now();
+    let result = Array.from(largeArray1.sort((i1,i2)=>i2-i1));
+    let endTime = performance.now();
+    assert.ok(true,'Order '+size+' items using .sort took '+(endTime-startTime)+' milliseconds');
+
+    startTime = performance.now();
+    result = Enumerable.from(largeArray2).orderBy(i=>size-i).toArray();
+    endTime = performance.now();
+    assert.ok(true,'Order '+size+' items using QuickSort took '+(endTime-startTime)+' milliseconds');
+
+    for (var i=0; i<size; i++) {
+        if (largeArray1[i]!=result[i]) {
+            assert.ok(false,'Arrays are not the same at index '+i+': '+largeArray1[i]+' != '+result[i]);
+            break;
+        }
+    }
+});
+
+QUnit.test( "OrderBy take performance random", function( assert ) {
+    const size = 10000000;
+    const largeArray1 = Enumerable.range(1,size).shuffle().toArray();
+    const largeArray2 = Array.from(largeArray1);
+
+    let startTime = performance.now();
+    let result1 = Enumerable.from(largeArray1.sort((i1,i2)=>i2-i1)).skip(100000).take(10000).toArray();
+    let endTime = performance.now();
+    assert.ok(true,'Order '+size+' items skip and take using .sort took '+(endTime-startTime)+' milliseconds');
+
+    startTime = performance.now();
+    let result2 = Enumerable.from(largeArray2).orderBy(i=>size-i).skip(100000).take(10000).toArray();
+    endTime = performance.now();
+    assert.ok(true,'Order '+size+' items skip and take using QuickSort took '+(endTime-startTime)+' milliseconds');
+
+    for (var i=0; i<size; i++) {
+        if (result1[i]!=result2[i]) {
+            assert.ok(false,'Arrays are not the same at index '+i+': '+result1[i]+' != '+result2[i]);
+            break;
+        }
+    }
+});
+
+/*QUnit.test( "OrderBy take performance random", function( assert ) {
+    const size = 10000000;
+    const largeArray1 = Enumerable.range(1,size).shuffle().toArray();
+    const largeArray2 = Array.from(largeArray1);
+    let startTime = performance.now();
+    let result = Enumerable.from(largeArray1.sort()).skip(10000).take(3).toArray();
+    let endTime = performance.now();
+    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
+    startTime = performance.now();
+    const arr = Enumerable.from(largeArray2).orderBy(i=>size-i).toArray();
+    result = Enumerable.from(arr).skip(10000).take(3).toArray();
+    endTime = performance.now();
+    assert.deepEqual(result,[9989999, 9989998, 9989997],'Order all '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
+});
+
+QUnit.test( "OrderBy take performance same value", function( assert ) {
     const size = 10000000;
     const largeArray1 = Array(size);
     const largeArray2 = Array(size);
     for (var i=0; i<size; i++) {
-        largeArray1[i]=(i%2)*size/2+Math.floor(i/2);
-        largeArray2[i]=(i%2)*size/2+Math.floor(i/2);
+        const value = 5;
+        largeArray1[i]=value;
+        largeArray2[i]=value;
     }
     let startTime = performance.now();
     let result = Enumerable.from(largeArray1).orderBy(i=>size-i).skip(10000).take(3).toArray();
@@ -684,6 +748,8 @@ QUnit.test( "OrderBy take performance", function( assert ) {
     endTime = performance.now();
     assert.deepEqual(result,[9989999, 9989998, 9989997],'Order all '+size+' items and take 3 took '+(endTime-startTime)+'milliseconds');
 });
+*/
+
 
 // Extra features
 QUnit.module('Extra features');
@@ -691,9 +757,11 @@ QUnit.module('Extra features');
 QUnit.test( "Enumerable.shuffle", function( assert ) {
     const result = Enumerable.range(1,10).shuffle();
     assert.deepEqual(result._wasIterated, false,'Passed!');
-    const arr = result.toArray();
+    let arr = result.toArray();
     assert.deepEqual(result._wasIterated, true,'Passed!');
     assert.notDeepEqual(arr, Enumerable.range(1,10).toArray(),'Passed!');
+    arr = result.toArray().sort((i1,i2)=>i1-i2);
+    assert.deepEqual(arr, Enumerable.range(1,10).toArray(),'Passed!');
 });
 
 QUnit.test( "Enumerable.binarySearch", function( assert ) {

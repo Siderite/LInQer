@@ -17,6 +17,9 @@
 		if (typeof src._useQuickSort !== 'undefined') {
 			this._useQuickSort = src._useQuickSort;
 		}
+		if (typeof src._forceQuickSort !== 'undefined') {
+			this._forceQuickSort = src._forceQuickSort;
+		}
 		this._canSeek = false;
 		this._count = null;
 		this._tryGetAt = null;
@@ -691,14 +694,13 @@
 			_ensureIterable(iterable);
 			return this.concat(iterable).distinct(equalityComparer);
 		},
-		/// use QuickSort for ordering (default)
-		/// allows optimizations for take, skip, takeLast, skipLast
+		/// use QuickSort for ordering (default) if take, skip, takeLast, skipLast are used
 		useQuickSort() {
 			this._useQuickSort = true;
 			return this;
 		},
-		/// use the default browser sort implementation for ordering
-		/// this may be faster for small arrays
+		/// use the default browser sort implementation for ordering at all times
+		/// removes QuickSort optimization when take, skip, takeLast, skipLast are used
 		useBrowserSort() {
 			this._useQuickSort = false;
 			return this;
@@ -756,6 +758,9 @@
 		if (typeof enumerable._useQuickSort !== 'undefined') {
 			this._useQuickSort = enumerable._useQuickSort;
 		}
+		if (typeof enumerable._forceQuickSort !== 'undefined') {
+			this._forceQuickSort = enumerable._forceQuickSort;
+		}
 		this._generator = function* () {
 			const arr = _toArray(this._src);
 			let startIndex = 0;
@@ -777,7 +782,9 @@
 				}
 			}
 			if (startIndex<endIndex) {
-				const sort = this._useQuickSort
+				// only use QuickSort as an optimization for take, skip, takeLast, skipLast
+				// _forceQuickSort forces it to be used at all times, used internally
+				const sort = this._useQuickSort && (this._forceQuickSort || this._restrictions.length)
 					? (a,c) => _quickSort(a,0,a.length-1,c,startIndex,endIndex)
 					: (a,c) => a.sort(c);
 				sort(arr, (i1,i2)=>{
@@ -935,22 +942,28 @@
 				left++;
 				right--;
 			} else {
-				return left+1;
+				if (left === right) return left+1;
 			}
 		}
 		return left;
 	}
 	function _quickSort(items, left, right, comparer=_defaultComparer, minIndex=0, maxIndex=Number.MAX_SAFE_INTEGER) {
 		if (!items.length) return items;
-	
-		const index = _partition(items, left, right, comparer); //index returned from partition
-		if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
-			_quickSort(items, left, index - 1, comparer, minIndex, maxIndex);
+
+		const partitions = [];
+		partitions.push([left, right]);
+		let partitionIndex = 0;
+		while (partitionIndex<partitions.length) {
+			[left,right]=partitions[partitionIndex];
+			const index = _partition(items, left, right, comparer); //index returned from partition
+			if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+				partitions.push([left,index-1]);
+			}
+			if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+				partitions.push([index,right]);
+			}
+			partitionIndex++;
 		}
-		if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-			_quickSort(items, index, right, comparer, minIndex, maxIndex);
-		}
-		
 		return items;
 	}
 
