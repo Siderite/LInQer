@@ -14,7 +14,10 @@
                 yield value;
             }
         }
-        return Enumerable.from(gen.bind(this));
+        const result = Enumerable.from(gen.bind(this));
+        const self = this;
+        result._count = ()=>self.count();
+        return result;
     };
     /// returns the distinct values based on a hashing function
     Enumerable.prototype.distinctByHash = function (hashFunc) {

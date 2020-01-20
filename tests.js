@@ -321,9 +321,10 @@ QUnit.test( "Enumerable.orderBy", function( assert ) {
     assert.deepEqual( result,[0,1,2,3,4,5], "Passed!" );
 });
 QUnit.test( "Enumerable.orderBy custom comparer forced QuickSort", function( assert ) {
-    let result = Enumerable.from([1,3,2,4,5,0]);
-    result._forceQuickSort = true;
-    result = result.orderBy(i=>i%2).toArray();
+    const result = Enumerable.from([1,3,2,4,5,0])
+                    .orderBy(i=>i%2)
+                    .take(Number.MAX_SAFE_INTEGER) // force QuickSort
+                    .toArray();
     assert.deepEqual( result,[4,2,0,5,1,3], "Passed!" );
 });
 QUnit.test( "Enumerable.orderBy custom comparer browser sort", function( assert ) {
@@ -332,7 +333,6 @@ QUnit.test( "Enumerable.orderBy custom comparer browser sort", function( assert 
         .orderBy(i=>i%2)
         .toArray();
     assert.deepEqual( result,[2,4,0,1,3,5], "Passed!" );
-    //assert.deepEqual( result,[4,2,0,5,1,3], "Passed!" );
 });
 QUnit.test( "Enumerable.orderByDescending", function( assert ) {
     const result = Enumerable.from([1,3,2,4,5,0]).orderByDescending().toArray();
@@ -510,10 +510,9 @@ QUnit.test( "OrderedEnumerable.thenByDescending", function( assert ) {
     assert.deepEqual( result,[2,4,1,3], "Passed!" );
 });
 QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select forced QuickSort", function( assert ) {
-    let result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3']);
-    result._forceQuickSort = true;
-    result = result
+    let result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3'])
                     .orderBy(i=>0)
+                    .take(Number.MAX_SAFE_INTEGER) // force QuickSort
                     .thenByDescending(i=>i.charAt(1))
                     .thenBy(i=>i.charAt(0)=='b')
                     .select(i=>'x'+i)
@@ -529,7 +528,6 @@ QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select default so
                     .select(i=>'x'+i)
                     .toArray();
     assert.deepEqual( result,['xa3','xc3','xa2','xb2','xa1','xc1','xb1'], "Passed!" );
-    //assert.deepEqual( result,['xa3','xc3','xa2','xb2','xc1','xa1','xb1'], "Passed!" );
 });
 
 QUnit.test( "OrderedEnumerable then take", function( assert ) {
@@ -574,6 +572,16 @@ QUnit.test( "Enumerable.take repeat", function( assert ) {
     assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
     assert.deepEqual( Array.from(result),[1,2,3], "Passed!" );
 });
+QUnit.test( "Enumerable.take orderBy", function( assert ) {
+    const result = Enumerable.from([2,4,5,3,1]).orderBy();
+    assert.deepEqual( Array.from(result),[1,2,3,4,5], "Passed!" );
+    assert.deepEqual( Array.from(result),[1,2,3,4,5], "Passed!" );
+});
+QUnit.test( "Enumerable.take orderBy take", function( assert ) {
+    const result = Enumerable.from([2,4,5,3,1]).orderBy().skip(1).take(3);
+    assert.deepEqual( Array.from(result),[2,3,4], "Passed!" );
+    assert.deepEqual( Array.from(result),[2,3,4], "Passed!" );
+});
 
 
 // composable count tests
@@ -594,12 +602,12 @@ QUnit.test( "Enumerable.range count", function( assert ) {
     assert.deepEqual( result.elementAtOrDefault(12345), 12445, "Passed!" );
     assert.deepEqual( result._wasIterated, false, "Passed!" );
 });
-QUnit.test( "Enumerable.concat count", function( assert ) {
+QUnit.test( "Enumerable.concat seekable count ", function( assert ) {
     const result = Enumerable.range(100,10000).concat(Enumerable.repeat(10,20000));
     assert.deepEqual( result.count(), 30000, "Passed!" );
     assert.deepEqual( result._wasIterated, false, "Passed!" );
 });
-QUnit.test( "Enumerable.concat count", function( assert ) {
+QUnit.test( "Enumerable.concat unseekable count", function( assert ) {
     const iterable = Enumerable.from(function*(){ yield 1; })
     const result = Enumerable.range(100,10000).concat(iterable);
     assert.deepEqual( result.count(), 10001, "Passed!" );
@@ -646,6 +654,97 @@ QUnit.test( "OrderedEnumerable with multiple restrictions count", function( asse
     assert.deepEqual(result.count(),2,"Passed!");
     assert.deepEqual(result._wasIterated,true,"Passed!");
 });
+
+// seek tests
+QUnit.module('seek tests');
+QUnit.test( "Enumerable.empty seek", function( assert ) {
+    const result = Enumerable.empty();
+    assert.deepEqual( result.count(), 0, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "Enumerable.range seek", function( assert ) {
+    const result = Enumerable.range(0,100000);
+    assert.deepEqual( result.count(), 100000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 10000, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "Enumerable.repeat seek", function( assert ) {
+    const result = Enumerable.repeat(123,100000);
+    assert.deepEqual( result.count(), 100000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 123, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "append seek", function( assert ) {
+    const result = Enumerable.range(0,100000).append(666666);
+    assert.deepEqual( result.count(), 100001, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(100000), 666666, "Passed!" );
+    assert.deepEqual( result.first(), 0, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "concat array seek", function( assert ) {
+    const result = Enumerable.range(0,100000).concat([0,1,2,3,4,5]);
+    assert.deepEqual( result.count(), 100006, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(100004), 4, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "concat Enumerable seek", function( assert ) {
+    const result = Enumerable.range(0,100000).concat(Enumerable.range(0,6));
+    assert.deepEqual( result.count(), 100006, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(100004), 4, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "prepend seek", function( assert ) {
+    const result = Enumerable.range(0,100000).prepend(666666);
+    assert.deepEqual( result.count(), 100001, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(100000), 99999, "Passed!" );
+    assert.deepEqual( result.first(), 666666, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "reverse seek", function( assert ) {
+    const result = Enumerable.range(0,100000).reverse();
+    assert.deepEqual( result.count(), 100000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 89999, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "select seek", function( assert ) {
+    const result = Enumerable.range(0,100000).select(i=>'a'+i);
+    assert.deepEqual( result.count(), 100000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 'a10000', "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(1000000), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "skip seek", function( assert ) {
+    const result = Enumerable.range(0,100000).skip(50000);
+    assert.deepEqual( result.count(), 50000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 60000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(1000000), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "skipLast seek", function( assert ) {
+    const result = Enumerable.range(0,100000).skipLast(50000);
+    assert.deepEqual( result.count(), 50000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 10000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(50000), undefined, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(1000000), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "take seek", function( assert ) {
+    const result = Enumerable.range(0,100000).take(50000);
+    assert.deepEqual( result.count(), 50000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 10000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(50000), undefined, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(1000000), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+QUnit.test( "skip takeLast", function( assert ) {
+    const result = Enumerable.range(0,100000).takeLast(50000);
+    assert.deepEqual( result.count(), 50000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(10000), 60000, "Passed!" );
+    assert.deepEqual( result.elementAtOrDefault(1000000), undefined, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
+});
+
 
 // performance tests
 QUnit.module('performance tests');
@@ -725,6 +824,11 @@ QUnit.test( "Enumerable.shuffle", function( assert ) {
     assert.notDeepEqual(arr, Enumerable.range(1,10).toArray(),'Passed!');
     arr = result.toArray().sort((i1,i2)=>i1-i2);
     assert.deepEqual(arr, Enumerable.range(1,10).toArray(),'Passed!');
+});
+QUnit.test( "shuffle count", function( assert ) {
+    const result = Enumerable.range(100,10000).shuffle();
+    assert.deepEqual( result.count(), 10000, "Passed!" );
+    assert.deepEqual( result._wasIterated, false, "Passed!" );
 });
 
 QUnit.test( "Enumerable.binarySearch", function( assert ) {
