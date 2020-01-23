@@ -5,7 +5,10 @@ Array functions in Javascript create a new array for each operation, which is te
 
 More details on the blog post for it: https://siderite.dev/blog/linq-in-javascript-linqer/. Leave comments there or add Issues here in order to get features or bug fixes or whatever.
 
-Find it hosted on GitHub Pages and use it freely in your projects at: https://siderite.github.io/LInQer/LInQer.min.js and https://siderite.github.io/LInQer/LInQer.extra.min.js .
+Find it hosted on GitHub Pages and use it freely in your projects at: 
+ - https://siderite.github.io/LInQer/LInQer.min.js
+ - https://siderite.github.io/LInQer/LInQer.slim.min.js
+ - https://siderite.github.io/LInQer/LInQer.extra.min.js .
 
 **Usage**
 
@@ -59,6 +62,7 @@ Reference Linqer.js for all of the original Enumerable methods, the ones in slim
 
 Reference Linqer.extra.js (needs Linqer.js) for some additional methods:
 - shuffle - randomizes the enumerable
+- randomSample - implements random reservoir sampling of k items
 - distinctByHash - distinct based on a hashing function, not a comparer - faster
 - exceptByHash - except based on a hashing function, not a comparer - faster
 - intersectByHash - intersect based on a hashing function, not a comparer - faster

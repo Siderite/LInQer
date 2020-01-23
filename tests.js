@@ -833,6 +833,34 @@ QUnit.test( "shuffle count", function( assert ) {
     assert.deepEqual( result._wasIterated, false, "Passed!" );
 });
 
+QUnit.test( "Enumerable.randomSample canSeek", function( assert ) {
+    const result = Enumerable.range(1,100000).randomSample(100);
+    const avg = Math.round(result.average());
+    assert.deepEqual(result.count(),100,"Sample average is "+avg+" and it should be close to 50000");
+});
+QUnit.test( "Enumerable.randomSample no canSeek", function( assert ) {
+    const result = Enumerable.from(function*() {
+        for (let i=0; i<100000; i++)
+            yield i;
+    }).randomSample(100);
+    const avg = Math.round(result.average());
+    assert.deepEqual(result.count(),100,"Sample average is "+avg+" and it should be close to 50000");
+});
+QUnit.test( "Enumerable.randomSample no canSeek limit", function( assert ) {
+    const result = Enumerable.from(function*() {
+        let i=0;
+        while (true) {
+            yield i;
+            if (i>100000) {
+                throw Error('It should never go above the limit of 100000')
+            }
+            i++;
+        }
+    }).randomSample(100,100000);
+    const avg = Math.round(result.average());
+    assert.deepEqual(result.count(),100,"Sample average is "+avg+" and it should be close to 50000");
+});
+
 QUnit.test( "Enumerable.binarySearch", function( assert ) {
     const result = Enumerable.range(1,10).select(i=>i*10).orderBy();
     assert.deepEqual(result._wasIterated, false,'Passed!');
