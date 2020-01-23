@@ -27,6 +27,44 @@ var Linqer;
         result._count = () => self.count();
         return result;
     };
+    /// implements random reservoir sampling of k items, with the option to specify a maximum limit for the items
+    Linqer.Enumerable.prototype.randomSample = function (k, limit = Number.MAX_SAFE_INTEGER) {
+        let index = 0;
+        const sample = [];
+        Linqer._ensureInternalTryGetAt(this);
+        if (this._canSeek) { // L algorithm
+            const length = this.count();
+            let index = 0;
+            for (index = 0; index < k && index < limit && index < length; index++) {
+                sample.push(this.elementAt(index));
+            }
+            let W = Math.exp(Math.log(Math.random()) / k);
+            while (index < length && index < limit) {
+                index += Math.floor(Math.log(Math.random()) / Math.log(1 - W)) + 1;
+                if (index < length && index < limit) {
+                    sample[Math.floor(Math.random() * k)] = this.elementAt(index);
+                    W *= Math.exp(Math.log(Math.random()) / k);
+                }
+            }
+        }
+        else { // R algorithm
+            for (const item of this) {
+                if (index < k) {
+                    sample.push(item);
+                }
+                else {
+                    const j = Math.floor(Math.random() * index);
+                    if (j < k) {
+                        sample[j] = item;
+                    }
+                }
+                index++;
+                if (index >= limit)
+                    break;
+            }
+        }
+        return Enumerable.from(sample);
+    };
     /// returns the distinct values based on a hashing function
     Linqer.Enumerable.prototype.distinctByHash = function (hashFunc) {
         const self = this;
@@ -74,7 +112,7 @@ var Linqer;
     /// WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
     Linqer.OrderedEnumerable.prototype.binarySearch = function (value, comparer = Linqer._defaultComparer) {
         let enumerable = this;
-        _ensureInternalTryGetAt(this);
+        Linqer._ensureInternalTryGetAt(this);
         if (!this._canSeek) {
             enumerable = Enumerable.from(Array.from(this));
         }
