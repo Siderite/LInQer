@@ -1,0 +1,28 @@
+{
+  "name": "@siderite/linqer",
+  "version": "1.0.0",
+  "description": "The C# Language Integrated Queries ported for Javascript for amazing performance",
+  "main": "tests.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Siderite/LInQer.git"
+  },
+  "keywords": [
+    "LINQ",
+    "Javascript",
+    "ES6",
+    "iterator",
+    "generator",
+    "Typescript"
+  ],
+  "author": "Siderite",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Siderite/LInQer/issues"
+  },
+  "homepage": "https://siderite.dev/blog/linq-in-javascript-linqer",
+  "dependencies": {}
+}

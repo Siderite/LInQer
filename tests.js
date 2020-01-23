@@ -1,3 +1,5 @@
+Enumerable = Linqer.Enumerable;
+
 // object and method tests
 QUnit.module('object and method tests');
 
@@ -312,7 +314,7 @@ QUnit.test( "Enumerable.ofType string parameter", function( assert ) {
 });
 QUnit.test( "Enumerable.ofType type parameter", function( assert ) {
     const enumerable = Enumerable.empty();
-    const result = Enumerable.from([undefined, null, Number.NaN,1,-1000,'some text',{value:'an object'}, enumerable]).ofType(Enumerable).toArray();
+    const result = Enumerable.from([undefined, null, Number.NaN,1,-1000,'some text',{value:'an object'}, enumerable]).ofType(Linqer.Enumerable).toArray();
     assert.deepEqual( result,[enumerable], "Passed!" );
 });
 
@@ -652,7 +654,7 @@ QUnit.test( "OrderedEnumerable with multiple restrictions count", function( asse
     result = result.skip(2).take(7).skipLast(3).takeLast(2);
     assert.deepEqual(result._wasIterated,false,"Passed!");
     assert.deepEqual(result.count(),2,"Passed!");
-    assert.deepEqual(result._wasIterated,true,"Passed!");
+    assert.deepEqual(result._wasIterated,false,"Passed!");
 });
 
 // seek tests
