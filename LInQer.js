@@ -326,6 +326,13 @@ var Linqer;
         toArray() {
             return Array.from(this);
         }
+        /// similar to toArray, but returns an Enumerable (itself if already seekable)
+        toList() {
+            _ensureInternalTryGetAt(this);
+            if (this._canSeek)
+                return this;
+            return Enumerable.from(Array.from(this));
+        }
         /// Filters a sequence of values based on a predicate.
         where(condition) {
             _ensureFunction(condition);
@@ -821,9 +828,6 @@ var Linqer;
         }
         return result;
     };
-    Linqer.Enumerable.prototype.toList = function () {
-        throw new Error('use toArray instead of toList');
-    };
     /// Produces the set union of two sequences.
     Linqer.Enumerable.prototype.union = function (iterable, equalityComparer = Linqer.EqualityComparer.default) {
         Linqer._ensureIterable(iterable);
@@ -832,7 +836,12 @@ var Linqer;
     /// Applies a specified function to the corresponding elements of two sequences, producing a sequence of the results.
     Linqer.Enumerable.prototype.zip = function (iterable, zipper) {
         Linqer._ensureIterable(iterable);
-        Linqer._ensureFunction(zipper);
+        if (!zipper) {
+            zipper = (i1, i2) => [i1, i2];
+        }
+        else {
+            Linqer._ensureFunction(zipper);
+        }
         const self = this;
         const gen = function* () {
             let index = 0;

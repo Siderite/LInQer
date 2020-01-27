@@ -344,6 +344,13 @@ namespace Linqer {
 			return Array.from(this);
 		}
 
+		/// similar to toArray, but returns an Enumerable (itself if already seekable)
+		toList(): Enumerable {
+			_ensureInternalTryGetAt(this);
+			if (this._canSeek) return this;
+			return Enumerable.from(Array.from(this));
+		}
+		
 		/// Filters a sequence of values based on a predicate.
 		where(condition: IFilter): Enumerable {
 			_ensureFunction(condition);

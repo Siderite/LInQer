@@ -25,6 +25,7 @@ Reference Linqer.slim.js for the basic methods:
 - skip and take
 - sum and sumAndCount (sum and count)
 - toArray
+- toList - similar to toArray, but returns an Enumerable (itself if already seekable)
 - where
 
 Reference Linqer.js for all of the original Enumerable methods, the ones in slim plus:
@@ -67,7 +68,10 @@ Reference Linqer.extra.js (needs Linqer.js) for some additional methods:
 - exceptByHash - except based on a hashing function, not a comparer - faster
 - intersectByHash - intersect based on a hashing function, not a comparer - faster
 - binarySearch - find the index of a value in a sorted enumerable by binary search
-
+- lag - joins each item of the enumerable with previous items from the same enumerable
+- lead - joins each item of the enumerable with next items from the same enumerable
+- padStart - pad enumerable at the start to a minimum length
+- padEnd - pad enumerable at the end to a minimum length
 
 ```
 const source = ... an array or a generator function or anything that is iterable... ;
@@ -89,4 +93,4 @@ The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet
 
 **Building the solution**
 
-The source files have been moved to Typescript. Run build.bat to create the js and map files. Ignore the errors.
+The source files have been moved to Typescript. Run build.bat to create the js and map files.

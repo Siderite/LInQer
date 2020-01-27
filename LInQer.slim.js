@@ -326,6 +326,13 @@ var Linqer;
         toArray() {
             return Array.from(this);
         }
+        /// similar to toArray, but returns an Enumerable (itself if already seekable)
+        toList() {
+            _ensureInternalTryGetAt(this);
+            if (this._canSeek)
+                return this;
+            return Enumerable.from(Array.from(this));
+        }
         /// Filters a sequence of values based on a predicate.
         where(condition) {
             _ensureFunction(condition);
@@ -449,4 +456,4 @@ var Linqer;
         exact: (item1, item2) => item1 === item2,
     };
 })(Linqer || (Linqer = {}));
-//# sourceMappingURL=LInQer.slim.js.map
+//# sourceMappingURL=LInQer.Slim.js.map

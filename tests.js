@@ -883,3 +883,103 @@ QUnit.test( "Enumerable.intersectByHash", function( assert ) {
     const result = Enumerable.from([1,2,2,3,'3']).intersectByHash([2,3],i=>+i).toArray();
     assert.deepEqual( result,[2,2,3,'3'], "Passed!" );
 });
+
+QUnit.test( "Enumerable.lag canSeek", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5,6]).lag(1,(i1,i2)=>i1+''+i2).toArray();
+    assert.deepEqual( result,['1undefined','21','32','43','54','65'], "Passed!" );
+});
+QUnit.test( "Enumerable.lead canSeek", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5,6]).lead(1,(i1,i2)=>i1+''+i2).toArray();
+    assert.deepEqual( result,['12','23','34','45','56','6undefined'], "Passed!" );
+});
+QUnit.test( "Enumerable.lag no canSeek", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3,4,5,6]) yield item; }).lag(1,(i1,i2)=>i1+''+i2).toArray();
+    assert.deepEqual( result,['1undefined','21','32','43','54','65'], "Passed!" );
+});
+QUnit.test( "Enumerable.lead no canSeek", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3,4,5,6]) yield item; }).lead(1,(i1,i2)=>i1+''+i2).toArray();
+    assert.deepEqual( result,['12','23','34','45','56','6undefined'], "Passed!" );
+});
+QUnit.test( "Enumerable.lag no canSeek 2", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3,4,5,6]) yield item; }).lag(2,(i1,i2)=>i1+''+i2).toArray();
+    assert.deepEqual( result,['1undefined','2undefined','31','42','53','64'], "Passed!" );
+});
+QUnit.test( "Enumerable.lead no canSeek 2", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3,4,5,6]) yield item; }).lead(2,(i1,i2)=>i1+''+i2).toArray();
+    assert.deepEqual( result,['13','24','35','46','5undefined','6undefined'], "Passed!" );
+});
+QUnit.test( "Enumerable.lag canSeek count", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5,6]).lag(1,(i1,i2)=>i1+''+i2);
+    assert.deepEqual( result.count(),6, "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.lead canSeek count", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5,6]).lead(1,(i1,i2)=>i1+''+i2);
+    assert.deepEqual( result.count(),6, "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.lag no canSeek count", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3,4,5,6]) yield item; }).lag(1,(i1,i2)=>i1+''+i2);
+    assert.deepEqual( result.count(),6, "Passed!" );
+    assert.deepEqual( result._wasIterated,true, "Passed!" );
+});
+QUnit.test( "Enumerable.lag canSeek elementAt", function( assert ) {
+    const result = Enumerable.from([1,2,3,4,5,6]).lag(1,(i1,i2)=>i1+''+i2);
+    assert.deepEqual( result.elementAt(1),'21', "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.lag no canSeek count", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3,4,5,6]) yield item; }).lag(1,(i1,i2)=>i1+''+i2);
+    assert.deepEqual( result.elementAt(1),'21', "Passed!" );
+    assert.deepEqual( result._wasIterated,true, "Passed!" );
+});
+
+QUnit.test( "Enumerable.padEnd canSeek value", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padEnd(5,16).toArray();
+    assert.deepEqual( result,[1,2,3,16,16], "Passed!" );
+});
+QUnit.test( "Enumerable.padEnd canSeek func", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padEnd(5,i=>i+11).toArray();
+    assert.deepEqual( result,[1,2,3,14,15], "Passed!" );
+});
+QUnit.test( "Enumerable.padEnd canSeek func count", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padEnd(5,i=>i+11);
+    assert.deepEqual( result.count(),5, "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.padEnd canSeek func elementAt", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padEnd(5,i=>i+11);
+    assert.deepEqual( result.elementAt(4),15, "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.padEnd no canSeek func elementAt", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3]) yield item; }).padEnd(5,i=>i+11);
+    assert.deepEqual( result.elementAt(4),15, "Passed!" );
+    assert.deepEqual( result._wasIterated,true, "Passed!" );
+});
+
+QUnit.test( "Enumerable.padStart canSeek value", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padStart(5,16).toArray();
+    assert.deepEqual( result,[16,16,1,2,3], "Passed!" );
+});
+QUnit.test( "Enumerable.padStart canSeek func", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padStart(5,i=>i+11).toArray();
+    assert.deepEqual( result,[11,12,1,2,3], "Passed!" );
+});
+QUnit.test( "Enumerable.padStart canSeek func count", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padStart(5,i=>i+11);
+    assert.deepEqual( result.count(),5, "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.padStart canSeek func elementAt", function( assert ) {
+    const result = Enumerable.from([1,2,3]).padStart(5,i=>i+11);
+    assert.deepEqual( result.elementAt(4),3, "Passed!" );
+    assert.deepEqual( result.elementAt(1),12, "Passed!" );
+    assert.deepEqual( result._wasIterated,false, "Passed!" );
+});
+QUnit.test( "Enumerable.padStart no canSeek func elementAt", function( assert ) {
+    const result = Enumerable.from(function*() { for (const item of [1,2,3]) yield item; }).padStart(5,i=>i+11);
+    assert.deepEqual( result.elementAt(4),3, "Passed!" );
+    assert.deepEqual( result.elementAt(1),12, "Passed!" );
+    assert.deepEqual( result._wasIterated,true, "Passed!" );
+});
