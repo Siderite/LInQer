@@ -1,12 +1,9 @@
 @ECHO OFF
 REM Delete Javascript files as we will generate them now
-DEL LInQer.Enumerable.js
 DEL LInQer.extra.js
 DEL LInQer.extra.min.js
-DEL LInQer.GroupEnumerable.js
 DEL LInQer.js
 DEL LInQer.min.js
-DEL LInQer.OrderedEnumerable.js
 DEL LInQer.slim.js
 DEL LInQer.slim.min.js
 
