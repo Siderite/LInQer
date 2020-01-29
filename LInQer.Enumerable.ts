@@ -88,9 +88,9 @@ namespace Linqer {
 		const f: ((x: any) => boolean) = typeof type === 'string'
 			? x => typeof x === type
 			: x => x instanceof type;
-		return this.where(item => {
+		return this.select(item => {
 			if (!f(item)) throw new Error(item + ' not of type ' + type);
-			return true;
+			return item;
 		});
 	}
 

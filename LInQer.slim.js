@@ -326,7 +326,7 @@ var Linqer;
         toArray() {
             return Array.from(this);
         }
-        /// similar to toArray, but returns an Enumerable (itself if already seekable)
+        /// similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
         toList() {
             _ensureInternalTryGetAt(this);
             if (this._canSeek)

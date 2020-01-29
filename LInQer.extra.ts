@@ -123,7 +123,7 @@ namespace Linqer {
 
     /// returns the index of a value in an ordered enumerable or false if not found
     /// WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
-    Linqer.OrderedEnumerable.prototype.binarySearch = function (value: any, comparer: IComparer = _defaultComparer): number | boolean {
+    Enumerable.prototype.binarySearch = function (value: any, comparer: IComparer = _defaultComparer): number | boolean {
         let enumerable: Enumerable = this;
         _ensureInternalTryGetAt(this);
         if (!this._canSeek) {

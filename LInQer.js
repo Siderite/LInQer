@@ -326,7 +326,7 @@ var Linqer;
         toArray() {
             return Array.from(this);
         }
-        /// similar to toArray, but returns an Enumerable (itself if already seekable)
+        /// similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
         toList() {
             _ensureInternalTryGetAt(this);
             if (this._canSeek)
@@ -507,10 +507,10 @@ var Linqer;
         const f = typeof type === 'string'
             ? x => typeof x === type
             : x => x instanceof type;
-        return this.where(item => {
+        return this.select(item => {
             if (!f(item))
                 throw new Error(item + ' not of type ' + type);
-            return true;
+            return item;
         });
     };
     /// Determines whether a sequence contains a specified element.
