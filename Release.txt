@@ -1,3 +1,6 @@
+2020-01-29 - 1.0.3
+  - updated README
+  - moved binarySearch on Enumerable (the user has the responsibility to have it ordered)
 2020-01-27 - 1.0.2
   - added toList to return a seekable Enumerable
   - added lag and lead to return a join between the enumerable and itself with an offset
