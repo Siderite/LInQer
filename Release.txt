@@ -1,4 +1,14 @@
-2020-01-22 - 1.0.0
-  - official launch
+2020-02-02 - 1.0.5
+  - added Linqer.all.js for node.js use and used it as the main entry point
+  - optimized sorting even more
+2020-01-29 - 1.0.3
+  - updated README
+  - moved binarySearch on Enumerable (the user has the responsibility to have it ordered)
+2020-01-27 - 1.0.2
+  - added toList to return a seekable Enumerable
+  - added lag and lead to return a join between the enumerable and itself with an offset
+  - added padEnd and padStart to return enumerable of at least a specific length, filling the missing items with a given value
 2020-01-23 - 1.0.1
   - added randomSample functionality
+2020-01-22 - 1.0.0
+  - official launch

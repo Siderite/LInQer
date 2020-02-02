@@ -31,7 +31,6 @@ namespace Linqer {
 		toObject(keySelector: ISelector, valueSelector: ISelector): { [key: string]: any };
 		toHashSet(): never;
 		toSet(): Set<any>;
-		toList(): never;
 		union(iterable: IterableType, equalityComparer: IEqualityComparer): Enumerable;
 		zip(iterable: IterableType, zipper: (item1: any, item2: any, index: number) => any): any;
 
@@ -89,9 +88,9 @@ namespace Linqer {
 		const f: ((x: any) => boolean) = typeof type === 'string'
 			? x => typeof x === type
 			: x => x instanceof type;
-		return this.where(item => {
+		return this.select(item => {
 			if (!f(item)) throw new Error(item + ' not of type ' + type);
-			return true;
+			return item;
 		});
 	}
 
@@ -422,10 +421,6 @@ namespace Linqer {
 		return result;
 	}
 
-	Enumerable.prototype.toList = function (): never {
-		throw new Error('use toArray instead of toList');
-	}
-
 	/// Produces the set union of two sequences.
 	Enumerable.prototype.union = function (iterable: IterableType, equalityComparer: IEqualityComparer = EqualityComparer.default): Enumerable {
 		_ensureIterable(iterable);
@@ -435,7 +430,11 @@ namespace Linqer {
 	/// Applies a specified function to the corresponding elements of two sequences, producing a sequence of the results.
 	Enumerable.prototype.zip = function (iterable: IterableType, zipper: (item1: any, item2: any, index: number) => any): any {
 		_ensureIterable(iterable);
-		_ensureFunction(zipper);
+		if (!zipper) {
+			zipper = (i1,i2)=>[i1,i2];
+		} else {
+			_ensureFunction(zipper);
+		}
 		const self: Enumerable = this;
 		const gen = function* () {
 			let index = 0;

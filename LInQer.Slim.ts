@@ -344,6 +344,13 @@ namespace Linqer {
 			return Array.from(this);
 		}
 
+		/// similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
+		toList(): Enumerable {
+			_ensureInternalTryGetAt(this);
+			if (this._canSeek) return this;
+			return Enumerable.from(Array.from(this));
+		}
+		
 		/// Filters a sequence of values based on a predicate.
 		where(condition: IFilter): Enumerable {
 			_ensureFunction(condition);

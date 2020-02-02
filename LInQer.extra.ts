@@ -12,10 +12,14 @@ namespace Linqer {
         exceptByHash(iterable: IterableType, hashFunc: ISelector): Enumerable;
         intersectByHash(iterable: IterableType, hashFunc: ISelector): Enumerable;
         binarySearch(value: any, comparer: IComparer): number | boolean;
+        lag(offset: number, zipper: (item1: any, item2: any) => any): Enumerable;
+        lead(offset: number, zipper: (item1: any, item2: any) => any): Enumerable;
+        padEnd(minLength: number, filler: any | ((index: number) => any)): Enumerable;
+        padStart(minLength: number, filler: any | ((index: number) => any)): Enumerable;
     }
 
     /// randomizes the enumerable
-    Linqer.Enumerable.prototype.shuffle = function (): Enumerable {
+    Enumerable.prototype.shuffle = function (): Enumerable {
         const self = this;
         function* gen() {
             const arr = Array.from(self);
@@ -36,10 +40,10 @@ namespace Linqer {
     };
 
     /// implements random reservoir sampling of k items, with the option to specify a maximum limit for the items
-    Linqer.Enumerable.prototype.randomSample = function (k: number, limit: number = Number.MAX_SAFE_INTEGER): Enumerable {
+    Enumerable.prototype.randomSample = function (k: number, limit: number = Number.MAX_SAFE_INTEGER): Enumerable {
         let index = 0;
         const sample = [];
-        Linqer._ensureInternalTryGetAt(this);
+        _ensureInternalTryGetAt(this);
         if (this._canSeek) { // L algorithm
             const length = this.count();
             let index = 0;
@@ -72,7 +76,7 @@ namespace Linqer {
     }
 
     /// returns the distinct values based on a hashing function
-    Linqer.Enumerable.prototype.distinctByHash = function (hashFunc: ISelector): Enumerable {
+    Enumerable.prototype.distinctByHash = function (hashFunc: ISelector): Enumerable {
         const self = this;
         const gen = function* () {
             const distinctValues = new Set();
@@ -88,8 +92,8 @@ namespace Linqer {
     };
 
     /// returns the values that have different hashes from the items of the iterable provided
-    Linqer.Enumerable.prototype.exceptByHash = function (iterable: IterableType, hashFunc: ISelector): Enumerable {
-        Linqer._ensureIterable(iterable);
+    Enumerable.prototype.exceptByHash = function (iterable: IterableType, hashFunc: ISelector): Enumerable {
+        _ensureIterable(iterable);
         const self = this;
         const gen = function* () {
             const distinctValues = Enumerable.from(iterable).select(hashFunc).toSet();
@@ -101,9 +105,10 @@ namespace Linqer {
         };
         return new Enumerable(gen);
     };
+
     /// returns the values that have the same hashes as items of the iterable provided
-    Linqer.Enumerable.prototype.intersectByHash = function (iterable: IterableType, hashFunc: ISelector): Enumerable {
-        Linqer._ensureIterable(iterable);
+    Enumerable.prototype.intersectByHash = function (iterable: IterableType, hashFunc: ISelector): Enumerable {
+        _ensureIterable(iterable);
         const self = this;
         const gen = function* () {
             const distinctValues = Enumerable.from(iterable).select(hashFunc).toSet();
@@ -118,9 +123,9 @@ namespace Linqer {
 
     /// returns the index of a value in an ordered enumerable or false if not found
     /// WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
-    Linqer.OrderedEnumerable.prototype.binarySearch = function (value: any, comparer: IComparer = Linqer._defaultComparer): number | boolean {
+    Enumerable.prototype.binarySearch = function (value: any, comparer: IComparer = _defaultComparer): number | boolean {
         let enumerable: Enumerable = this;
-        Linqer._ensureInternalTryGetAt(this);
+        _ensureInternalTryGetAt(this);
         if (!this._canSeek) {
             enumerable = Enumerable.from(Array.from(this));
         }
@@ -141,4 +146,223 @@ namespace Linqer {
         return false;
     };
 
+    /// joins each item of the enumerable with previous items from the same enumerable
+    Enumerable.prototype.lag = function (offset: number, zipper: (item1: any, item2: any) => any): Enumerable {
+        if (!offset) {
+            throw new Error('offset has to be positive');
+        }
+        if (offset < 0) {
+            throw new Error('offset has to be positive. Use .lead if you want to join with next items');
+        }
+        if (!zipper) {
+            zipper = (i1, i2) => [i1, i2];
+        } else {
+            _ensureFunction(zipper);
+        }
+        const self = this;
+        _ensureInternalTryGetAt(this);
+        const gen = function* () {
+            const buffer = Array(offset);
+            let index = 0;
+            for (const item of self) {
+                const index2 = index - offset;
+                const item2 = index2 < 0
+                    ? undefined
+                    : buffer[index2 % offset];
+                yield zipper(item, item2);
+                buffer[index % offset] = item;
+                index++;
+            }
+        };
+        const result = new Enumerable(gen);
+        result._count = () => {
+            const count = self.count();
+            if (!result._wasIterated) result._wasIterated = self._wasIterated;
+            return count;
+        };
+        if (self._canSeek) {
+            result._canSeek = true;
+            result._tryGetAt = (index: number) => {
+                const val1 = self._tryGetAt!(index);
+                const val2 = self._tryGetAt!(index - offset);
+                if (val1) {
+                    return {
+                        value: zipper(
+                            val1.value,
+                            val2 ? val2.value : undefined
+                        )
+                    };
+                }
+                return null;
+            };
+        }
+        return result;
+    }
+
+
+    /// joins each item of the enumerable with next items from the same enumerable
+    Enumerable.prototype.lead = function (offset: number, zipper: (item1: any, item2: any) => any): Enumerable {
+        if (!offset) {
+            throw new Error('offset has to be positive');
+        }
+        if (offset < 0) {
+            throw new Error('offset has to be positive. Use .lag if you want to join with previous items');
+        }
+        if (!zipper) {
+            zipper = (i1, i2) => [i1, i2];
+        } else {
+            _ensureFunction(zipper);
+        }
+        const self = this;
+        _ensureInternalTryGetAt(this);
+        const gen = function* () {
+            const buffer = Array(offset);
+            let index = 0;
+            for (const item of self) {
+                const index2 = index - offset;
+                if (index2 >= 0) {
+                    const item2 = buffer[index2 % offset];
+                    yield zipper(item2, item);
+                }
+                buffer[index % offset] = item;
+                index++;
+            }
+            for (let i = 0; i < offset; i++) {
+                const item = buffer[(index + i) % offset];
+                yield zipper(item, undefined);
+            }
+        };
+        const result = new Enumerable(gen);
+        result._count = () => {
+            const count = self.count();
+            if (!result._wasIterated) result._wasIterated = self._wasIterated;
+            return count;
+        };
+        if (self._canSeek) {
+            result._canSeek = true;
+            result._tryGetAt = (index: number) => {
+                const val1 = self._tryGetAt!(index);
+                const val2 = self._tryGetAt!(index - offset);
+                if (val1) {
+                    return {
+                        value: zipper(
+                            val1.value,
+                            val2 ? val2.value : undefined
+                        )
+                    };
+                }
+                return null;
+            };
+        }
+        return result;
+    }
+
+    /// returns an enumerable of at least minLength, padding the end with a value or the result of a function
+    Enumerable.prototype.padEnd = function (minLength: number, filler: any | ((index: number) => any)): Enumerable {
+        if (minLength <= 0) {
+            throw new Error('minLength has to be positive.');
+        }
+        let fillerFunc: (index: number) => any;
+        if (typeof filler !== 'function') {
+            fillerFunc = (index: number) => filler;
+        } else {
+            fillerFunc = filler;
+        }
+        const self = this;
+        _ensureInternalTryGetAt(this);
+        const gen = function* () {
+            let index = 0;
+            for (const item of self) {
+                yield item;
+                index++;
+            }
+            for (; index < minLength; index++) {
+                yield fillerFunc(index);
+            }
+        };
+        const result = new Enumerable(gen);
+        result._count = () => {
+            const count = Math.max(minLength, self.count());
+            if (!result._wasIterated) result._wasIterated = self._wasIterated;
+            return count;
+        };
+        if (self._canSeek) {
+            result._canSeek = true;
+            result._tryGetAt = (index: number) => {
+                const val = self._tryGetAt!(index);
+                if (val) return val;
+                if (index < minLength) {
+                    return { value: fillerFunc(index) };
+                }
+                return null;
+            };
+        }
+        return result;
+    }
+
+
+    /// returns an enumerable of at least minLength, padding the start with a value or the result of a function
+    /// if the enumerable cannot seek, then it will be iterated minLength time
+    Enumerable.prototype.padStart = function (minLength: number, filler: any | ((index: number) => any)): Enumerable {
+        if (minLength <= 0) {
+            throw new Error('minLength has to be positive.');
+        }
+        let fillerFunc: (index: number) => any;
+        if (typeof filler !== 'function') {
+            fillerFunc = (index: number) => filler;
+        } else {
+            fillerFunc = filler;
+        }
+        const self = this;
+        _ensureInternalTryGetAt(self);
+        const gen = function* () {
+            const buffer = Array(minLength);
+            let index = 0;
+            const iterator = self[Symbol.iterator]();
+            let flushed = false;
+            let done = false;
+            do {
+                const val = iterator.next();
+                done = !!val.done;
+                if (!done) {
+                    buffer[index] = val.value;
+                    index++;
+                }
+                if (flushed && !done) {
+                    yield val.value;
+                } else {
+                    if (done || index === minLength) {
+                        for (let i = 0; i < minLength - index; i++) {
+                            yield fillerFunc(i);
+                        }
+                        for (let i = 0; i < index; i++) {
+                            yield buffer[i];
+                        }
+                        flushed = true;
+                    }
+                }
+            } while (!done);
+        };
+        const result = new Enumerable(gen);
+        result._count = () => {
+            const count = Math.max(minLength, self.count());
+            if (!result._wasIterated) result._wasIterated = self._wasIterated;
+            return count;
+        };
+        if (self._canSeek) {
+            result._canSeek = true;
+            result._tryGetAt = (index: number) => {
+                const count = self.count();
+                const delta = minLength-count;
+                if (delta<=0) {
+                    return self._tryGetAt!(index);
+                }
+                if (index<delta) {
+                    return { value: fillerFunc(index) };
+                }
+                return self._tryGetAt!(index-delta);
+            };
+        }
+        return result;
+    }
 }

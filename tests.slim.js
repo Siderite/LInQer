@@ -6,7 +6,7 @@ QUnit.module('object and method tests');
 QUnit.test("Enumerable.from with empty array", function (assert) {
     const enumerable = Enumerable.from([]);
     const result = [];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
 
     assert.deepEqual(result, [], "Passed!");
 });
@@ -14,7 +14,7 @@ QUnit.test("Enumerable.from with empty array", function (assert) {
 QUnit.test("Enumerable.from with non empty array", function (assert) {
     const enumerable = Enumerable.from([1, 'a2', 3, null]);
     const result = [];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
 
     assert.deepEqual(result, [1, 'a2', 3, null], "Passed!");
 });
@@ -28,7 +28,7 @@ QUnit.test("Enumerable.from with generator function", function (assert) {
     }
     const enumerable = Enumerable.from(gen());
     const result = [];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
 
     assert.deepEqual(result, [1, 'a2', 3, null], "Passed!");
 });

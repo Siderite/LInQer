@@ -72,15 +72,8 @@ namespace Linqer {
 					const sort: (item1: any, item2: any) => void = this._useQuickSort && this._restrictions.length
 						? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
 						: (a, c) => a.sort(c);
-					sort(arr, (i1: any, i2: any) => {
-						for (const selector of self._keySelectors) {
-							const v1 = selector.keySelector(i1);
-							const v2 = selector.keySelector(i2);
-							if (v1 > v2) return selector.ascending ? 1 : -1;
-							if (v1 < v2) return selector.ascending ? -1 : 1;
-						}
-						return 0;
-					});
+					const sortFunc = this.generateSortFunc(self._keySelectors);
+					sort(arr, sortFunc);
 					for (let index = startIndex; index < endIndex; index++) {
 						yield arr[index];
 					}
@@ -94,10 +87,33 @@ namespace Linqer {
 			};
 		}
 
+		private generateSortFunc(selectors: { keySelector: ISelector, ascending: boolean }[]): (i1: any, i2: any)=> number {
+			const comparers = selectors.map(s=>{
+				const f = s.keySelector;
+				const comparer  = (i1:any,i2:any)=> {
+					const k1 = f(i1);
+					const k2 = f(i2);
+					if (k1>k2) return 1;
+					if (k1<k2) return -1;
+					return 0;
+				};
+				return s.ascending
+					? comparer
+					: (i1:any,i2:any)=> -comparer(i1,i2);
+			});
+			return (i1: any, i2: any) => {
+				for (const comparer of comparers) {
+					const v = comparer(i1,i2);
+					if (v) return v;
+				}
+				return 0;
+			};
+		}
+
 		private getStartAndEndIndexes(restrictions: { type: RestrictionType, nr: number }[], arrLength: number) {
 			let startIndex = 0;
 			let endIndex = arrLength;
-			for (var restriction of restrictions) {
+			for (const restriction of restrictions) {
 				switch (restriction.type) {
 					case RestrictionType.take:
 						endIndex = Math.min(endIndex, startIndex + restriction.nr);
