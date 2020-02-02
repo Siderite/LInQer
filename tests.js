@@ -6,7 +6,7 @@ QUnit.module('object and method tests');
 QUnit.test( "Enumerable.from with empty array", function( assert ) {
     const enumerable = Enumerable.from([]);
     const result =[];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
             
     assert.deepEqual( result,[], "Passed!" );
 });
@@ -14,7 +14,7 @@ QUnit.test( "Enumerable.from with empty array", function( assert ) {
 QUnit.test( "Enumerable.from with non empty array", function( assert ) {
     const enumerable = Enumerable.from([1,'a2',3,null]);
     const result =[];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
             
     assert.deepEqual( result,[1,'a2',3,null], "Passed!" );
 });
@@ -28,7 +28,7 @@ QUnit.test( "Enumerable.from with generator function", function( assert ) {
     }
     const enumerable = Enumerable.from(gen());
     const result =[];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
             
     assert.deepEqual( result,[1,'a2',3,null], "Passed!" );
 });
@@ -36,7 +36,7 @@ QUnit.test( "Enumerable.from with generator function", function( assert ) {
 QUnit.test( "Enumerable.empty", function( assert ) {
     const enumerable = Enumerable.empty();
     const result =[];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
             
     assert.deepEqual( result,[], "Passed!" );
 });
@@ -44,7 +44,7 @@ QUnit.test( "Enumerable.empty", function( assert ) {
 QUnit.test( "Enumerable.range", function( assert ) {
     const enumerable = Enumerable.range(10,2);
     const result =[];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
             
     assert.deepEqual( result,[10,11], "Passed!" );
 });
@@ -52,7 +52,7 @@ QUnit.test( "Enumerable.range", function( assert ) {
 QUnit.test( "Enumerable.repeat", function( assert ) {
     const enumerable = Enumerable.repeat(10,2);
     const result =[];
-    for (var item of enumerable) result.push(item);
+    for (const item of enumerable) result.push(item);
             
     assert.deepEqual( result,[10,10], "Passed!" );
 });
@@ -772,21 +772,32 @@ QUnit.test( "Use only items that are required - Enumerable", function( assert ) 
 QUnit.test( "OrderBy performance random", function( assert ) {
     const size = 10000000;
     const largeArray1 = Enumerable.range(1,size).shuffle().toArray();
-    const largeArray2 = Array.from(largeArray1);
 
     let startTime = performance.now();
-    let result = Array.from(largeArray1.sort((i1,i2)=>i2-i1));
+    const result1 = Array.from(largeArray1).sort((i1,i2)=>i2-i1);
     let endTime = performance.now();
-    assert.ok(true,'Order '+size+' items using .sort took '+(endTime-startTime)+' milliseconds');
+    assert.ok(true,'Order '+size+' items using Aray.from then .sort took '+(endTime-startTime)+' milliseconds');
 
     startTime = performance.now();
-    result = Enumerable.from(largeArray2).orderBy(i=>size-i).toArray();
+    const result2 = Enumerable.from(largeArray1).orderBy(i=>size-i).toArray();
     endTime = performance.now();
-    assert.ok(true,'Order '+size+' items using QuickSort took '+(endTime-startTime)+' milliseconds');
+    assert.ok(true,'Order '+size+' items using sort internally took '+(endTime-startTime)+' milliseconds');
 
-    for (var i=0; i<size; i++) {
-        if (largeArray1[i]!=result[i]) {
-            assert.ok(false,'Arrays are not the same at index '+i+': '+largeArray1[i]+' != '+result[i]);
+    for (let i=0; i<size; i++) {
+        if (result1[i]!=result2[i]) {
+            assert.ok(false,'Arrays are not the same at index '+i+': '+result1[i]+' != '+result2[i]);
+            break;
+        }
+    }
+
+    startTime = performance.now();
+    const result3 = Enumerable.from(largeArray1).orderBy(i=>size-i).skip(0).toArray();
+    endTime = performance.now();
+    assert.ok(true,'Order '+size+' items using forced QuickSort took '+(endTime-startTime)+' milliseconds');
+
+    for (let i=0; i<size; i++) {
+        if (result1[i]!=result3[i]) {
+            assert.ok(false,'Arrays are not the same at index '+i+': '+result1[i]+' != '+result3[i]);
             break;
         }
     }
@@ -807,7 +818,7 @@ QUnit.test( "OrderBy take performance random", function( assert ) {
     endTime = performance.now();
     assert.ok(true,'Order '+size+' items skip and take using QuickSort took '+(endTime-startTime)+' milliseconds');
 
-    for (var i=0; i<size; i++) {
+    for (let i=0; i<size; i++) {
         if (result1[i]!=result2[i]) {
             assert.ok(false,'Arrays are not the same at index '+i+': '+result1[i]+' != '+result2[i]);
             break;

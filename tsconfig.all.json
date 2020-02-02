@@ -11,7 +11,7 @@
     // "declaration": true,                   /* Generates corresponding '.d.ts' file. */
     // "declarationMap": true,                /* Generates a sourcemap for each corresponding '.d.ts' file. */
     // "sourceMap": true,                     /* Generates corresponding '.map' file. */
-    "outFile": "./LInQer.js",                       /* Concatenate and emit output to single file. */
+    "outFile": "./LInQer.all.js",                       /* Concatenate and emit output to single file. */
     // "outDir": "./",                        /* Redirect output structure to the directory. */
     // "rootDir": "./",                       /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
     // "composite": true,                     /* Enable project compilation */
@@ -64,5 +64,5 @@
     "forceConsistentCasingInFileNames": true  /* Disallow inconsistently-cased references to the same file. */
   },
   "compileOnSave": true,
-  "files": ["./LInQer.Slim.ts","./LInQer.Enumerable.ts","./LInQer.GroupEnumerable.ts","./LInQer.OrderedEnumerable.ts","./npm.export.ts"]
+  "files": ["./LInQer.Slim.ts","./LInQer.Enumerable.ts","./LInQer.GroupEnumerable.ts","./LInQer.OrderedEnumerable.ts","./LInQer.Extra.ts","./npm.export.ts"]
 }

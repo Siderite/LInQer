@@ -6,15 +6,18 @@ DEL LInQer.js
 DEL LInQer.min.js
 DEL LInQer.slim.js
 DEL LInQer.slim.min.js
+DEL LInQer.all.js
 
 DEL LInQer.extra.js.map
 DEL LInQer.js.map
 DEL LInQer.slim.js.map
+DEL LInQer.all.js.map
 
 REM Requires npm install typescript -g
-call tsc --p tsconfig.json --sourceMap --noResolve
+call tsc --p tsconfig.json --sourceMap
 call tsc --p tsconfig.slim.json --sourceMap --noResolve
 call tsc --p tsconfig.extra.json --sourceMap --noResolve
+call tsc --p tsconfig.all.json --sourceMap
 
 REM Delete intermediary Javascript files
 DEL LInQer.Enumerable.js

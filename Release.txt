@@ -1,3 +1,6 @@
+2020-02-02 - 1.0.5
+  - added Linqer.all.js for node.js use and used it as the main entry point
+  - optimized sorting even more
 2020-01-29 - 1.0.3
   - updated README
   - moved binarySearch on Enumerable (the user has the responsibility to have it ordered)

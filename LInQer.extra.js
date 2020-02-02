@@ -1,11 +1,11 @@
 "use strict";
-/// <reference path="./Linqer.Slim.ts" />
-/// <reference path="./Linqer.Enumerable.ts" />
-/// <reference path="./Linqer.OrderedEnumerable.ts" />
+/// <reference path="./LInQer.Slim.ts" />
+/// <reference path="./LInQer.Enumerable.ts" />
+/// <reference path="./LInQer.OrderedEnumerable.ts" />
 var Linqer;
-/// <reference path="./Linqer.Slim.ts" />
-/// <reference path="./Linqer.Enumerable.ts" />
-/// <reference path="./Linqer.OrderedEnumerable.ts" />
+/// <reference path="./LInQer.Slim.ts" />
+/// <reference path="./LInQer.Enumerable.ts" />
+/// <reference path="./LInQer.OrderedEnumerable.ts" />
 (function (Linqer) {
     /// randomizes the enumerable
     Linqer.Enumerable.prototype.shuffle = function () {

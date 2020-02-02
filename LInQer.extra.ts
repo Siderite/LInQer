@@ -1,6 +1,6 @@
-/// <reference path="./Linqer.Slim.ts" />
-/// <reference path="./Linqer.Enumerable.ts" />
-/// <reference path="./Linqer.OrderedEnumerable.ts" />
+/// <reference path="./LInQer.Slim.ts" />
+/// <reference path="./LInQer.Enumerable.ts" />
+/// <reference path="./LInQer.OrderedEnumerable.ts" />
 
 namespace Linqer {
 
