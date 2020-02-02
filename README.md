@@ -23,6 +23,11 @@ const result = enumerable
                 .take(5);
 for (const item of result) ...
 ```
+in Node.js you have to prepend:
+```
+const Linqer = require('@siderite/linqer');
+```
+
 
 # Licence
 MIT

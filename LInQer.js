@@ -1183,8 +1183,6 @@ var Linqer;
 })(Linqer || (Linqer = {}));
 // export to NPM
 if (typeof (module) !== 'undefined') {
-    module.exports = {
-        Linqer: Linqer,
-    };
+    module.exports = Linqer;
 }
 //# sourceMappingURL=LInQer.js.map
