@@ -1,3 +1,5 @@
+2020-02-02 - 1.0.7
+  - library now exports Linqer as the module.exports object
 2020-02-02 - 1.0.6
   - used case sensitive main entry point
 2020-02-02 - 1.0.5
