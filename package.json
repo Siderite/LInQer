@@ -1,6 +1,6 @@
 {
   "name": "@siderite/linqer",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "The C# Language Integrated Queries ported for Javascript for amazing performance",
   "main": "LInQer.all.js",
   "scripts": {
