@@ -327,7 +327,7 @@ QUnit.test( "Enumerable.orderBy custom comparer forced QuickSort", function( ass
                     .orderBy(i=>i%2)
                     .take(Number.MAX_SAFE_INTEGER) // force QuickSort
                     .toArray();
-    assert.deepEqual( result,[4,2,0,5,1,3], "Passed!" );
+    assert.deepEqual( result.map(i=>i%2),[0,0,0,1,1,1], "Passed!" );
 });
 QUnit.test( "Enumerable.orderBy custom comparer browser sort", function( assert ) {
     const result = Enumerable.from([1,3,2,4,5,0])
@@ -511,15 +511,18 @@ QUnit.test( "OrderedEnumerable.thenByDescending", function( assert ) {
     const result = Enumerable.from([1,2,3,4]).orderByDescending(i=>i%2==0).thenByDescending(i=>-i).toArray();
     assert.deepEqual( result,[2,4,1,3], "Passed!" );
 });
-QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select forced QuickSort", function( assert ) {
+QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select QuickSort", function( assert ) {
     let result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3'])
+                    .useQuickSort()
                     .orderBy(i=>0)
-                    .take(Number.MAX_SAFE_INTEGER) // force QuickSort
                     .thenByDescending(i=>i.charAt(1))
                     .thenBy(i=>i.charAt(0)=='b')
                     .select(i=>'x'+i)
                     .toArray();
-    assert.deepEqual( result,['xa3','xc3','xa2','xb2','xc1','xa1','xb1'], "Passed!" );
+    //assert.deepEqual( result,['xa3','xc3','xa2','xb2','xc1','xa1','xb1'], "Passed!" );
+    assert.deepEqual( result.map(i=>i.charAt(2)),['3','3','2','2','1','1','1'], "Passed!" );
+    assert.deepEqual( result[3].charAt(1),'b', "Passed!" );
+    assert.deepEqual( result[6].charAt(1),'b', "Passed!" );
 });
 QUnit.test( "OrderedEnumerable.thenByDescending and thenBy and select default sort", function( assert ) {
     const result = Enumerable.from(['a1','a2','a3','b1','b2','c1','c3'])
@@ -553,6 +556,12 @@ QUnit.test( "OrderedEnumerable with multiple restrictions", function( assert ) {
     assert.deepEqual(result._wasIterated,false,"Passed!");
     const arr = result.toArray();
     assert.deepEqual( arr,[4,5], "Passed!" );
+});
+QUnit.test( "Enumerable.sort in place", function( assert ) {
+    const arr = [1,2,3,4];
+    const result = Enumerable.sort(arr, i=>i%2==1);
+    assert.deepEqual( arr, result, "Passed!" );
+    assert.deepEqual( arr.map(i=>i%2),[0,0,1,1], "Passed!" );
 });
 
 
@@ -776,12 +785,12 @@ QUnit.test( "OrderBy performance random", function( assert ) {
     let startTime = performance.now();
     const result1 = Array.from(largeArray1).sort((i1,i2)=>i2-i1);
     let endTime = performance.now();
-    assert.ok(true,'Order '+size+' items using Aray.from then .sort took '+(endTime-startTime)+' milliseconds');
+    assert.ok(true,'Order '+size+' items using Array.from then .sort took '+(endTime-startTime)+' milliseconds');
 
     startTime = performance.now();
-    const result2 = Enumerable.from(largeArray1).orderBy(i=>size-i).toArray();
+    const result2 = Enumerable.from(largeArray1).orderBy(i=>size-i).useBrowserSort().toArray();
     endTime = performance.now();
-    assert.ok(true,'Order '+size+' items using sort internally took '+(endTime-startTime)+' milliseconds');
+    assert.ok(true,'Order '+size+' items using browser sort internally took '+(endTime-startTime)+' milliseconds');
 
     for (let i=0; i<size; i++) {
         if (result1[i]!=result2[i]) {
@@ -791,9 +800,9 @@ QUnit.test( "OrderBy performance random", function( assert ) {
     }
 
     startTime = performance.now();
-    const result3 = Enumerable.from(largeArray1).orderBy(i=>size-i).skip(0).toArray();
+    const result3 = Enumerable.from(largeArray1).orderBy(i=>size-i).useQuickSort().toArray();
     endTime = performance.now();
-    assert.ok(true,'Order '+size+' items using forced QuickSort took '+(endTime-startTime)+' milliseconds');
+    assert.ok(true,'Order '+size+' items using QuickSort took '+(endTime-startTime)+' milliseconds');
 
     for (let i=0; i<size; i++) {
         if (result1[i]!=result3[i]) {
@@ -825,6 +834,30 @@ QUnit.test( "OrderBy take performance random", function( assert ) {
         }
     }
 });
+
+QUnit.test( "sort in place performance random", function( assert ) {
+    const size = 10000000;
+    const largeArray1 = Enumerable.range(1,size).shuffle().toArray();
+    const largeArray2 = Array.from(largeArray1);
+
+    let startTime = performance.now();
+    const result1 = largeArray1.sort(Linqer._defaultComparer);
+    let endTime = performance.now();
+    assert.ok(true,'Sort inline '+size+' items using Array.sort took '+(endTime-startTime)+' milliseconds');
+
+    startTime = performance.now();
+    const result2 = Enumerable.sort(largeArray2);
+    endTime = performance.now();
+    assert.ok(true,'Sort inline '+size+' items using QuickSort '+(endTime-startTime)+' milliseconds');
+
+    for (let i=0; i<size; i++) {
+        if (result1[i]!=result2[i]) {
+            assert.ok(false,'Arrays are not the same at index '+i+': '+result1[i]+' != '+result2[i]);
+            break;
+        }
+    }
+});
+
 
 // Extra features
 QUnit.module('Extra features');

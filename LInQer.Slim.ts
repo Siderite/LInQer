@@ -9,6 +9,10 @@ namespace Linqer {
 		_count: null | (() => number);
 		_tryGetAt: null | ((index: number) => { value: any } | null);
 		_wasIterated: boolean;
+
+		/// sort an array in place
+		static sort: (arr: any[], comparer?: IComparer) => any[];
+		
 		constructor(src: IterableType) {
 			_ensureIterable(src);
 			this._src = src;
