@@ -1,6 +1,13 @@
 namespace Linqer {
 
-	/// wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
+	/**
+	 * wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
+	 *
+	 * @export
+	 * @class Enumerable
+	 * @implements {Iterable<any>}
+	 * @implements {IUsesQuickSort}
+	 */
 	export class Enumerable implements Iterable<any>, IUsesQuickSort {
 		_src: IterableType;
 		_generator: () => Iterator<any>;
@@ -10,9 +17,19 @@ namespace Linqer {
 		_tryGetAt: null | ((index: number) => { value: any } | null);
 		_wasIterated: boolean;
 
-		/// sort an array in place
+		/**
+		 * sort an array in place using the Enumerable sort algorithm (Quicksort)
+		 *
+		 * @static
+		 * @memberof Enumerable
+		 */
 		static sort: (arr: any[], comparer?: IComparer) => any[];
 		
+		/**
+		 * You should never use this. Instead use Enumerable.from
+		 * @param {IterableType} src
+		 * @memberof Enumerable
+		 */
 		constructor(src: IterableType) {
 			_ensureIterable(src);
 			this._src = src;
@@ -30,20 +47,39 @@ namespace Linqer {
 			this._tryGetAt = null;
 			this._wasIterated = false;
 		}
-		/// Wraps an iterable item into an Enumerable if it's not already one
+
+		/**
+		 * Wraps an iterable item into an Enumerable if it's not already one
+		 *
+		 * @static
+		 * @param {IterableType} iterable
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		static from(iterable: IterableType): Enumerable {
 			if (iterable instanceof Enumerable) return iterable;
 			return new Enumerable(iterable);
 		}
-
-		/// the Enumerable instance exposes the same iterator as the wrapped iterable or generator function 
+		
+		/**
+		 * the Enumerable instance exposes the same iterator as the wrapped iterable or generator function 
+		 *
+		 * @returns {Iterator<any>}
+		 * @memberof Enumerable
+		 */
 		[Symbol.iterator](): Iterator<any> {
 			this._wasIterated = true;
 			return this._generator();
 		}
 
 
-		/// returns an empty Enumerable
+		/**
+		 * returns an empty Enumerable
+		 *
+		 * @static
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		static empty(): Enumerable {
 			const result = new Enumerable([]);
 			result._count = () => 0;
@@ -52,7 +88,15 @@ namespace Linqer {
 			return result;
 		}
 
-		/// generates a sequence of integral numbers within a specified range.
+		/**
+		 * generates a sequence of integer numbers within a specified range.
+		 *
+		 * @static
+		 * @param {number} start
+		 * @param {number} count
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		static range(start: number, count: number): Enumerable {
 			const gen = function* () {
 				for (let i = 0; i < count; i++) {
@@ -69,7 +113,15 @@ namespace Linqer {
 			return result;
 		}
 
-		/// Generates a sequence that contains one repeated value.
+		/**
+		 *  Generates a sequence that contains one repeated value.
+		 *
+		 * @static
+		 * @param {*} item
+		 * @param {number} count
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		static repeat(item: any, count: number): Enumerable {
 			const gen = function* () {
 				for (let i = 0; i < count; i++) {
@@ -86,7 +138,14 @@ namespace Linqer {
 			return result;
 		}
 
-		/// Concatenates two sequences by appending iterable to the existing one.
+		
+		/**
+		 * Concatenates two sequences by appending iterable to the existing one.
+		 *
+		 * @param {IterableType} iterable
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		concat(iterable: IterableType): Enumerable {
 			_ensureIterable(iterable);
 			const self: Enumerable = this;
@@ -112,13 +171,27 @@ namespace Linqer {
 			return result;
 		}
 
-		/// Returns the number of elements in a sequence.
+		
+		/**
+		 * Returns the number of elements in a sequence.
+		 *
+		 * @returns {number}
+		 * @memberof Enumerable
+		 */
 		count(): number {
 			_ensureInternalCount(this);
 			return this._count!();
 		}
 
-		/// Returns distinct elements from a sequence. WARNING: using a comparer makes this slower
+		
+		/**
+		 * Returns distinct elements from a sequence.
+		 * WARNING: using a comparer makes this slower. Not specifying it uses a Set to determine distinctiveness.
+		 *
+		 * @param {IEqualityComparer} [equalityComparer=EqualityComparer.default]
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		distinct(equalityComparer: IEqualityComparer = EqualityComparer.default): Enumerable {
 			const self: Enumerable = this;
 			const gen = equalityComparer === EqualityComparer.default
@@ -149,7 +222,14 @@ namespace Linqer {
 			return new Enumerable(gen);
 		}
 
-		/// Returns the element at a specified index in a sequence.
+		
+		/**
+		 * Returns the element at a specified index in a sequence.
+		 *
+		 * @param {number} index
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		elementAt(index: number): any {
 			_ensureInternalTryGetAt(this);
 			const result = this._tryGetAt!(index);
@@ -157,7 +237,14 @@ namespace Linqer {
 			return result.value;
 		}
 
-		/// Returns the element at a specified index in a sequence or a default value if the index is out of range.
+		
+		/**
+		 * Returns the element at a specified index in a sequence or undefined if the index is out of range.
+		 *
+		 * @param {number} index
+		 * @returns {(any | undefined)}
+		 * @memberof Enumerable
+		 */
 		elementAtOrDefault(index: number): any | undefined {
 			_ensureInternalTryGetAt(this);
 			const result = this._tryGetAt!(index);
@@ -165,17 +252,35 @@ namespace Linqer {
 			return result.value;
 		}
 
-		/// Returns the first element of a sequence.
+		
+		/**
+		 * Returns the first element of a sequence.
+		 *
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		first(): any {
 			return this.elementAt(0);
 		}
 
-		/// Returns the first element of a sequence, or a default value if no element is found.
+		
+		/**
+		 * Returns the first element of a sequence, or a default value if no element is found.
+		 *
+		 * @returns {(any | undefined)}
+		 * @memberof Enumerable
+		 */
 		firstOrDefault(): any | undefined {
 			return this.elementAtOrDefault(0);
 		}
 
-		/// Returns the last element of a sequence.
+		
+		/**
+		 * Returns the last element of a sequence.
+		 *
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		last(): any {
 			_ensureInternalTryGetAt(this);
 			if (!this._canSeek) {
@@ -192,7 +297,13 @@ namespace Linqer {
 			return this.elementAt(count - 1);
 		}
 
-		/// Returns the last element of a sequence, or a default value if no element is found.
+		
+		/**
+		 * Returns the last element of a sequence, or undefined if no element is found.
+		 *
+		 * @returns {(any | undefined)}
+		 * @memberof Enumerable
+		 */
 		lastOrDefault(): any | undefined {
 			_ensureInternalTryGetAt(this);
 			if (!this._canSeek) {
@@ -206,8 +317,14 @@ namespace Linqer {
 			return this.elementAtOrDefault(count - 1);
 		}
 
-		/// Returns the count, minimum and maximum value in a sequence of values.
-		/// A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+		/**
+		 * Returns the count, minimum and maximum value in a sequence of values.
+		 * A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+		 *
+		 * @param {IComparer} [comparer]
+		 * @returns {{ count: number, min: any, max: any }}
+		 * @memberof Enumerable
+		 */
 		stats(comparer?: IComparer): { count: number, min: any, max: any } {
 			if (comparer) {
 				_ensureFunction(comparer);
@@ -227,8 +344,14 @@ namespace Linqer {
 			return agg;
 		}
 
-		/// Returns the minimum value in a sequence of values.
-		/// A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+		/**
+		 *  Returns the minimum value in a sequence of values.
+		 *  A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)		
+		 *
+		 * @param {IComparer} [comparer]
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		min(comparer?: IComparer): any {
 			const stats = this.stats(comparer);
 			return stats.count === 0
@@ -236,8 +359,15 @@ namespace Linqer {
 				: stats.min;
 		}
 
-		/// Returns the maximum value in a sequence of values.
-		/// A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+		
+		/**
+		 *  Returns the maximum value in a sequence of values.
+		 *  A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+		 *
+		 * @param {IComparer} [comparer]
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		max(comparer?: IComparer): any {
 			const stats = this.stats(comparer);
 			return stats.count === 0
@@ -245,7 +375,14 @@ namespace Linqer {
 				: stats.max;
 		}
 
-		/// Projects each element of a sequence into a new form.
+		
+		/**
+		 * Projects each element of a sequence into a new form.
+		 *
+		 * @param {ISelector} selector
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		select(selector: ISelector): Enumerable {
 			_ensureFunction(selector);
 			const self: Enumerable = this;
@@ -269,7 +406,14 @@ namespace Linqer {
 			return result;
 		}
 
-		/// Bypasses a specified number of elements in a sequence and then returns the remaining elements.
+		
+		/**
+		 * Bypasses a specified number of elements in a sequence and then returns the remaining elements.
+		 *
+		 * @param {number} nr
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		skip(nr: number): Enumerable {
 			const self: Enumerable = this;
 			const gen = function* () {
@@ -291,7 +435,13 @@ namespace Linqer {
 			return result;
 		}
 
-		/// Computes the sum of a sequence of numeric values.
+		
+		/**
+		 * Computes the sum of a sequence of numeric values.
+		 *
+		 * @returns {(number | undefined)}
+		 * @memberof Enumerable
+		 */
 		sum(): number | undefined {
 			const stats = this.sumAndCount();
 			return stats.count === 0
@@ -299,7 +449,13 @@ namespace Linqer {
 				: stats.sum;
 		}
 
-		/// Computes the sum of a sequence of numeric values.
+		
+		/**
+		 * Computes the sum and count of a sequence of numeric values.
+		 *
+		 * @returns {{ sum: number, count: number }}
+		 * @memberof Enumerable
+		 */
 		sumAndCount(): { sum: number, count: number } {
 			const agg = {
 				count: 0,
@@ -314,7 +470,14 @@ namespace Linqer {
 			return agg;
 		}
 
-		/// Returns a specified number of contiguous elements from the start of a sequence.
+		
+		/**
+		 * Returns a specified number of contiguous elements from the start of a sequence.
+		 *
+		 * @param {number} nr
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		take(nr: number): Enumerable {
 			const self: Enumerable = this;
 			const gen = function* () {
@@ -343,19 +506,38 @@ namespace Linqer {
 			return result;
 		}
 
-		/// creates an array from an Enumerable
+		
+		/**
+		 * creates an array from an Enumerable
+		 *
+		 * @returns {any[]}
+		 * @memberof Enumerable
+		 */
 		toArray(): any[] {
 			return Array.from(this);
 		}
 
-		/// similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
+		
+		/**
+		 * similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
+		 *
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		toList(): Enumerable {
 			_ensureInternalTryGetAt(this);
 			if (this._canSeek) return this;
 			return Enumerable.from(Array.from(this));
 		}
 		
-		/// Filters a sequence of values based on a predicate.
+		
+		/**
+		 * Filters a sequence of values based on a predicate.
+		 *
+		 * @param {IFilter} condition
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		where(condition: IFilter): Enumerable {
 			_ensureFunction(condition);
 			const self: Enumerable = this;
@@ -452,30 +634,50 @@ namespace Linqer {
 		}
 	}
 
-	/// an extended iterable type that also supports generator functions
+	/**
+	 * an extended iterable type that also supports generator functions
+	 */
 	export type IterableType = Iterable<any> | (() => Iterator<any>) | Enumerable;
 
+	/**
+	 * A comparer function to be used in sorting
+	 */
 	export type IComparer = (item1: any, item2: any) => -1 | 0 | 1;
+	/**
+	 * A selector function to be used in mapping
+	 */
 	export type ISelector<T = any> = (item: any, index?: number) => T;
+	/**
+	 * A filter function
+	 */
 	export type IFilter = ISelector<boolean>;
 
+	/**
+	 * The default comparer function between two items
+	 * @param item1 
+	 * @param item2 
+	 */
 	export const _defaultComparer: IComparer = (item1, item2) => {
 		if (item1 > item2) return 1;
 		if (item1 < item2) return -1;
 		return 0;
 	};
 
-
+	/**
+	 * Interface for an equality comparer
+	 */
 	export type IEqualityComparer = (item1: any, item2: any) => boolean;
 
-	/// default equality comparers
+	/**
+	 * Predefined equality comparers
+	 * default is the equivalent of ==
+	 * exact is the equivalent of ===
+	 */
 	export const EqualityComparer = {
 		default: (item1: any, item2: any) => item1 == item2,
 		exact: (item1: any, item2: any) => item1 === item2,
 	};
 
-
-	/// an object that supports the quick sort use flag
 	interface IUsesQuickSort {
 		_useQuickSort: boolean;
 	}

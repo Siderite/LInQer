@@ -2,9 +2,35 @@
 namespace Linqer {
 
 	export interface Enumerable extends Iterable<any> {
+		/**
+		 * Sorts the elements of a sequence in ascending order.
+		 *
+		 * @param {ISelector} keySelector
+		 * @returns {OrderedEnumerable}
+		 * @memberof Enumerable
+		 */
 		orderBy(keySelector: ISelector): OrderedEnumerable;
+		/**
+		 * Sorts the elements of a sequence in descending order.
+		 *
+		 * @param {ISelector} keySelector
+		 * @returns {OrderedEnumerable}
+		 * @memberof Enumerable
+		 */
 		orderByDescending(keySelector: ISelector): OrderedEnumerable;
+		/**
+		 * use QuickSort for ordering (default). Recommended when take, skip, takeLast, skipLast are used after orderBy
+		 *
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		useQuickSort(): Enumerable;
+		/**
+		 * use the default browser sort implementation for ordering at all times
+		 *
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		useBrowserSort(): Enumerable;
 	}
 
@@ -55,10 +81,24 @@ namespace Linqer {
 		takeLast
 	}
 
+	/**
+	 * An Enumerable yielding ordered items
+	 *
+	 * @export
+	 * @class OrderedEnumerable
+	 * @extends {Enumerable}
+	 */
 	export class OrderedEnumerable extends Enumerable {
 		_keySelectors: { keySelector: ISelector, ascending: boolean }[];
 		_restrictions: { type: RestrictionType, nr: number }[];
 
+		/**
+		 *Creates an instance of OrderedEnumerable.
+		 * @param {IterableType} src
+		 * @param {ISelector} [keySelector]
+		 * @param {boolean} [ascending=true]
+		 * @memberof OrderedEnumerable
+		 */
 		constructor(src: IterableType,
 			keySelector?: ISelector,
 			ascending: boolean = true) {
@@ -167,38 +207,85 @@ namespace Linqer {
 			return { startIndex, endIndex };
 		}
 
-		/// Performs a subsequent ordering of the elements in a sequence in ascending order.
+		
+		/**
+		 * Performs a subsequent ordering of the elements in a sequence in ascending order.
+		 *
+		 * @param {ISelector} keySelector
+		 * @returns {OrderedEnumerable}
+		 * @memberof OrderedEnumerable
+		 */
 		thenBy(keySelector: ISelector): OrderedEnumerable {
 			this._keySelectors.push({ keySelector: keySelector, ascending: true });
 			return this;
 		}
-		/// Performs a subsequent ordering of the elements in a sequence in descending order.
+		/**
+		 * Performs a subsequent ordering of the elements in a sequence in descending order.
+		 *
+		 * @param {ISelector} keySelector
+		 * @returns {OrderedEnumerable}
+		 * @memberof OrderedEnumerable
+		 */
 		thenByDescending(keySelector: ISelector): OrderedEnumerable {
 			this._keySelectors.push({ keySelector: keySelector, ascending: false });
 			return this;
 		}
-		/// Deferred and optimized implementation of take
+		 
+		/**
+		 * Deferred and optimized implementation of take
+		 *
+		 * @param {number} nr
+		 * @returns {OrderedEnumerable}
+		 * @memberof OrderedEnumerable
+		 */
 		take(nr: number): OrderedEnumerable {
 			this._restrictions.push({ type: RestrictionType.take, nr: nr });
 			return this;
 		}
-		/// Deferred and optimized implementation of takeLast
+		
+		/**
+		 * Deferred and optimized implementation of takeLast
+		 *
+		 * @param {number} nr
+		 * @returns {OrderedEnumerable}
+		 * @memberof OrderedEnumerable
+		 */
 		takeLast(nr: number): OrderedEnumerable {
 			this._restrictions.push({ type: RestrictionType.takeLast, nr: nr });
 			return this;
 		}
-		/// Deferred and optimized implementation of skip
+		
+		/**
+		 * Deferred and optimized implementation of skip
+		 *
+		 * @param {number} nr
+		 * @returns {OrderedEnumerable}
+		 * @memberof OrderedEnumerable
+		 */
 		skip(nr: number): OrderedEnumerable {
 			this._restrictions.push({ type: RestrictionType.skip, nr: nr });
 			return this;
 		}
-		/// Deferred and optimized implementation of skipLast
+		
+		/**
+		 * Deferred and optimized implementation of skipLast
+		 *
+		 * @param {number} nr
+		 * @returns {OrderedEnumerable}
+		 * @memberof OrderedEnumerable
+		 */
 		skipLast(nr: number): OrderedEnumerable {
 			this._restrictions.push({ type: RestrictionType.skipLast, nr: nr });
 			return this;
 		}
 
-		/// creates an array from an Enumerable
+		
+		/**
+		 * An optimized implementation of toArray
+		 *
+		 * @returns {any[]}
+		 * @memberof OrderedEnumerable
+		 */
 		toArray(): any[] {
 			const { startIndex, endIndex, arr } = this.getSortedArray();
 			return arr
@@ -206,7 +293,15 @@ namespace Linqer {
 				: [];
 		}
 
-		/// creates a map from an Enumerable
+		
+		/**
+		 * An optimized implementation of toMap
+		 *
+		 * @param {ISelector} keySelector
+		 * @param {ISelector} [valueSelector=x => x]
+		 * @returns {Map<any, any>}
+		 * @memberof OrderedEnumerable
+		 */
 		toMap(keySelector: ISelector, valueSelector: ISelector = x => x): Map<any, any> {
 			_ensureFunction(keySelector);
 			_ensureFunction(valueSelector);
@@ -218,7 +313,15 @@ namespace Linqer {
 			return result;
 		}
 
-		/// creates an object from an enumerable
+		
+		/**
+		 * An optimized implementation of toObject
+		 *
+		 * @param {ISelector} keySelector
+		 * @param {ISelector} [valueSelector=x => x]
+		 * @returns {{ [key: string]: any }}
+		 * @memberof OrderedEnumerable
+		 */
 		toObject(keySelector: ISelector, valueSelector: ISelector = x => x): { [key: string]: any } {
 			_ensureFunction(keySelector);
 			_ensureFunction(valueSelector);
@@ -230,7 +333,13 @@ namespace Linqer {
 			return result;
 		}
 
-		/// creates a set from an enumerable
+		
+		/**
+		 * An optimized implementation of to Set
+		 *
+		 * @returns {Set<any>}
+		 * @memberof OrderedEnumerable
+		 */
 		toSet(): Set<any> {
 			const result = new Set<any>();
 			const arr = this.toArray();

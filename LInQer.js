@@ -1,8 +1,20 @@
 "use strict";
 var Linqer;
 (function (Linqer) {
-    /// wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
+    /**
+     * wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
+     *
+     * @export
+     * @class Enumerable
+     * @implements {Iterable<any>}
+     * @implements {IUsesQuickSort}
+     */
     class Enumerable {
+        /**
+         * You should never use this. Instead use Enumerable.from
+         * @param {IterableType} src
+         * @memberof Enumerable
+         */
         constructor(src) {
             _ensureIterable(src);
             this._src = src;
@@ -21,18 +33,36 @@ var Linqer;
             this._tryGetAt = null;
             this._wasIterated = false;
         }
-        /// Wraps an iterable item into an Enumerable if it's not already one
+        /**
+         * Wraps an iterable item into an Enumerable if it's not already one
+         *
+         * @static
+         * @param {IterableType} iterable
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         static from(iterable) {
             if (iterable instanceof Enumerable)
                 return iterable;
             return new Enumerable(iterable);
         }
-        /// the Enumerable instance exposes the same iterator as the wrapped iterable or generator function 
+        /**
+         * the Enumerable instance exposes the same iterator as the wrapped iterable or generator function
+         *
+         * @returns {Iterator<any>}
+         * @memberof Enumerable
+         */
         [Symbol.iterator]() {
             this._wasIterated = true;
             return this._generator();
         }
-        /// returns an empty Enumerable
+        /**
+         * returns an empty Enumerable
+         *
+         * @static
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         static empty() {
             const result = new Enumerable([]);
             result._count = () => 0;
@@ -40,7 +70,15 @@ var Linqer;
             result._canSeek = true;
             return result;
         }
-        /// generates a sequence of integral numbers within a specified range.
+        /**
+         * generates a sequence of integer numbers within a specified range.
+         *
+         * @static
+         * @param {number} start
+         * @param {number} count
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         static range(start, count) {
             const gen = function* () {
                 for (let i = 0; i < count; i++) {
@@ -57,7 +95,15 @@ var Linqer;
             result._canSeek = true;
             return result;
         }
-        /// Generates a sequence that contains one repeated value.
+        /**
+         *  Generates a sequence that contains one repeated value.
+         *
+         * @static
+         * @param {*} item
+         * @param {number} count
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         static repeat(item, count) {
             const gen = function* () {
                 for (let i = 0; i < count; i++) {
@@ -74,7 +120,13 @@ var Linqer;
             result._canSeek = true;
             return result;
         }
-        /// Concatenates two sequences by appending iterable to the existing one.
+        /**
+         * Concatenates two sequences by appending iterable to the existing one.
+         *
+         * @param {IterableType} iterable
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         concat(iterable) {
             _ensureIterable(iterable);
             const self = this;
@@ -99,12 +151,24 @@ var Linqer;
             }
             return result;
         }
-        /// Returns the number of elements in a sequence.
+        /**
+         * Returns the number of elements in a sequence.
+         *
+         * @returns {number}
+         * @memberof Enumerable
+         */
         count() {
             _ensureInternalCount(this);
             return this._count();
         }
-        /// Returns distinct elements from a sequence. WARNING: using a comparer makes this slower
+        /**
+         * Returns distinct elements from a sequence.
+         * WARNING: using a comparer makes this slower. Not specifying it uses a Set to determine distinctiveness.
+         *
+         * @param {IEqualityComparer} [equalityComparer=EqualityComparer.default]
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         distinct(equalityComparer = Linqer.EqualityComparer.default) {
             const self = this;
             const gen = equalityComparer === Linqer.EqualityComparer.default
@@ -135,7 +199,13 @@ var Linqer;
                 };
             return new Enumerable(gen);
         }
-        /// Returns the element at a specified index in a sequence.
+        /**
+         * Returns the element at a specified index in a sequence.
+         *
+         * @param {number} index
+         * @returns {*}
+         * @memberof Enumerable
+         */
         elementAt(index) {
             _ensureInternalTryGetAt(this);
             const result = this._tryGetAt(index);
@@ -143,7 +213,13 @@ var Linqer;
                 throw new Error('Index out of range');
             return result.value;
         }
-        /// Returns the element at a specified index in a sequence or a default value if the index is out of range.
+        /**
+         * Returns the element at a specified index in a sequence or undefined if the index is out of range.
+         *
+         * @param {number} index
+         * @returns {(any | undefined)}
+         * @memberof Enumerable
+         */
         elementAtOrDefault(index) {
             _ensureInternalTryGetAt(this);
             const result = this._tryGetAt(index);
@@ -151,15 +227,30 @@ var Linqer;
                 return undefined;
             return result.value;
         }
-        /// Returns the first element of a sequence.
+        /**
+         * Returns the first element of a sequence.
+         *
+         * @returns {*}
+         * @memberof Enumerable
+         */
         first() {
             return this.elementAt(0);
         }
-        /// Returns the first element of a sequence, or a default value if no element is found.
+        /**
+         * Returns the first element of a sequence, or a default value if no element is found.
+         *
+         * @returns {(any | undefined)}
+         * @memberof Enumerable
+         */
         firstOrDefault() {
             return this.elementAtOrDefault(0);
         }
-        /// Returns the last element of a sequence.
+        /**
+         * Returns the last element of a sequence.
+         *
+         * @returns {*}
+         * @memberof Enumerable
+         */
         last() {
             _ensureInternalTryGetAt(this);
             if (!this._canSeek) {
@@ -176,7 +267,12 @@ var Linqer;
             const count = this.count();
             return this.elementAt(count - 1);
         }
-        /// Returns the last element of a sequence, or a default value if no element is found.
+        /**
+         * Returns the last element of a sequence, or undefined if no element is found.
+         *
+         * @returns {(any | undefined)}
+         * @memberof Enumerable
+         */
         lastOrDefault() {
             _ensureInternalTryGetAt(this);
             if (!this._canSeek) {
@@ -189,8 +285,14 @@ var Linqer;
             const count = this.count();
             return this.elementAtOrDefault(count - 1);
         }
-        /// Returns the count, minimum and maximum value in a sequence of values.
-        /// A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+        /**
+         * Returns the count, minimum and maximum value in a sequence of values.
+         * A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+         *
+         * @param {IComparer} [comparer]
+         * @returns {{ count: number, min: any, max: any }}
+         * @memberof Enumerable
+         */
         stats(comparer) {
             if (comparer) {
                 _ensureFunction(comparer);
@@ -212,23 +314,41 @@ var Linqer;
             }
             return agg;
         }
-        /// Returns the minimum value in a sequence of values.
-        /// A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+        /**
+         *  Returns the minimum value in a sequence of values.
+         *  A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+         *
+         * @param {IComparer} [comparer]
+         * @returns {*}
+         * @memberof Enumerable
+         */
         min(comparer) {
             const stats = this.stats(comparer);
             return stats.count === 0
                 ? undefined
                 : stats.min;
         }
-        /// Returns the maximum value in a sequence of values.
-        /// A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+        /**
+         *  Returns the maximum value in a sequence of values.
+         *  A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+         *
+         * @param {IComparer} [comparer]
+         * @returns {*}
+         * @memberof Enumerable
+         */
         max(comparer) {
             const stats = this.stats(comparer);
             return stats.count === 0
                 ? undefined
                 : stats.max;
         }
-        /// Projects each element of a sequence into a new form.
+        /**
+         * Projects each element of a sequence into a new form.
+         *
+         * @param {ISelector} selector
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         select(selector) {
             _ensureFunction(selector);
             const self = this;
@@ -252,7 +372,13 @@ var Linqer;
             };
             return result;
         }
-        /// Bypasses a specified number of elements in a sequence and then returns the remaining elements.
+        /**
+         * Bypasses a specified number of elements in a sequence and then returns the remaining elements.
+         *
+         * @param {number} nr
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         skip(nr) {
             const self = this;
             const gen = function* () {
@@ -273,14 +399,24 @@ var Linqer;
             result._tryGetAt = index => self._tryGetAt(index + nr);
             return result;
         }
-        /// Computes the sum of a sequence of numeric values.
+        /**
+         * Computes the sum of a sequence of numeric values.
+         *
+         * @returns {(number | undefined)}
+         * @memberof Enumerable
+         */
         sum() {
             const stats = this.sumAndCount();
             return stats.count === 0
                 ? undefined
                 : stats.sum;
         }
-        /// Computes the sum of a sequence of numeric values.
+        /**
+         * Computes the sum and count of a sequence of numeric values.
+         *
+         * @returns {{ sum: number, count: number }}
+         * @memberof Enumerable
+         */
         sumAndCount() {
             const agg = {
                 count: 0,
@@ -294,7 +430,13 @@ var Linqer;
             }
             return agg;
         }
-        /// Returns a specified number of contiguous elements from the start of a sequence.
+        /**
+         * Returns a specified number of contiguous elements from the start of a sequence.
+         *
+         * @param {number} nr
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         take(nr) {
             const self = this;
             const gen = function* () {
@@ -322,18 +464,34 @@ var Linqer;
             }
             return result;
         }
-        /// creates an array from an Enumerable
+        /**
+         * creates an array from an Enumerable
+         *
+         * @returns {any[]}
+         * @memberof Enumerable
+         */
         toArray() {
             return Array.from(this);
         }
-        /// similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
+        /**
+         * similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
+         *
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         toList() {
             _ensureInternalTryGetAt(this);
             if (this._canSeek)
                 return this;
             return Enumerable.from(Array.from(this));
         }
-        /// Filters a sequence of values based on a predicate.
+        /**
+         * Filters a sequence of values based on a predicate.
+         *
+         * @param {IFilter} condition
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         where(condition) {
             _ensureFunction(condition);
             const self = this;
@@ -443,6 +601,11 @@ var Linqer;
         };
     }
     Linqer._ensureInternalTryGetAt = _ensureInternalTryGetAt;
+    /**
+     * The default comparer function between two items
+     * @param item1
+     * @param item2
+     */
     Linqer._defaultComparer = (item1, item2) => {
         if (item1 > item2)
             return 1;
@@ -450,7 +613,11 @@ var Linqer;
             return -1;
         return 0;
     };
-    /// default equality comparers
+    /**
+     * Predefined equality comparers
+     * default is the equivalent of ==
+     * exact is the equivalent of ===
+     */
     Linqer.EqualityComparer = {
         default: (item1, item2) => item1 == item2,
         exact: (item1, item2) => item1 === item2,
@@ -962,6 +1129,13 @@ var Linqer;
     Linqer.Enumerable.prototype.toLookup = function () {
         throw new Error('use groupBy instead of toLookup');
     };
+    /**
+     * An Enumerable that also exposes a group key
+     *
+     * @export
+     * @class GroupEnumerable
+     * @extends {Enumerable}
+     */
     class GroupEnumerable extends Linqer.Enumerable {
         constructor(iterable, key) {
             super(iterable);
@@ -1027,7 +1201,21 @@ var Linqer;
         RestrictionType[RestrictionType["take"] = 2] = "take";
         RestrictionType[RestrictionType["takeLast"] = 3] = "takeLast";
     })(RestrictionType || (RestrictionType = {}));
+    /**
+     * An Enumerable yielding ordered items
+     *
+     * @export
+     * @class OrderedEnumerable
+     * @extends {Enumerable}
+     */
     class OrderedEnumerable extends Linqer.Enumerable {
+        /**
+         *Creates an instance of OrderedEnumerable.
+         * @param {IterableType} src
+         * @param {ISelector} [keySelector]
+         * @param {boolean} [ascending=true]
+         * @memberof OrderedEnumerable
+         */
         constructor(src, keySelector, ascending = true) {
             super(src);
             this._keySelectors = [];
@@ -1134,44 +1322,92 @@ var Linqer;
             }
             return { startIndex, endIndex };
         }
-        /// Performs a subsequent ordering of the elements in a sequence in ascending order.
+        /**
+         * Performs a subsequent ordering of the elements in a sequence in ascending order.
+         *
+         * @param {ISelector} keySelector
+         * @returns {OrderedEnumerable}
+         * @memberof OrderedEnumerable
+         */
         thenBy(keySelector) {
             this._keySelectors.push({ keySelector: keySelector, ascending: true });
             return this;
         }
-        /// Performs a subsequent ordering of the elements in a sequence in descending order.
+        /**
+         * Performs a subsequent ordering of the elements in a sequence in descending order.
+         *
+         * @param {ISelector} keySelector
+         * @returns {OrderedEnumerable}
+         * @memberof OrderedEnumerable
+         */
         thenByDescending(keySelector) {
             this._keySelectors.push({ keySelector: keySelector, ascending: false });
             return this;
         }
-        /// Deferred and optimized implementation of take
+        /**
+         * Deferred and optimized implementation of take
+         *
+         * @param {number} nr
+         * @returns {OrderedEnumerable}
+         * @memberof OrderedEnumerable
+         */
         take(nr) {
             this._restrictions.push({ type: RestrictionType.take, nr: nr });
             return this;
         }
-        /// Deferred and optimized implementation of takeLast
+        /**
+         * Deferred and optimized implementation of takeLast
+         *
+         * @param {number} nr
+         * @returns {OrderedEnumerable}
+         * @memberof OrderedEnumerable
+         */
         takeLast(nr) {
             this._restrictions.push({ type: RestrictionType.takeLast, nr: nr });
             return this;
         }
-        /// Deferred and optimized implementation of skip
+        /**
+         * Deferred and optimized implementation of skip
+         *
+         * @param {number} nr
+         * @returns {OrderedEnumerable}
+         * @memberof OrderedEnumerable
+         */
         skip(nr) {
             this._restrictions.push({ type: RestrictionType.skip, nr: nr });
             return this;
         }
-        /// Deferred and optimized implementation of skipLast
+        /**
+         * Deferred and optimized implementation of skipLast
+         *
+         * @param {number} nr
+         * @returns {OrderedEnumerable}
+         * @memberof OrderedEnumerable
+         */
         skipLast(nr) {
             this._restrictions.push({ type: RestrictionType.skipLast, nr: nr });
             return this;
         }
-        /// creates an array from an Enumerable
+        /**
+         * An optimized implementation of toArray
+         *
+         * @returns {any[]}
+         * @memberof OrderedEnumerable
+         */
         toArray() {
             const { startIndex, endIndex, arr } = this.getSortedArray();
             return arr
                 ? arr.slice(startIndex, endIndex)
                 : [];
         }
-        /// creates a map from an Enumerable
+        /**
+         * An optimized implementation of toMap
+         *
+         * @param {ISelector} keySelector
+         * @param {ISelector} [valueSelector=x => x]
+         * @returns {Map<any, any>}
+         * @memberof OrderedEnumerable
+         */
         toMap(keySelector, valueSelector = x => x) {
             _ensureFunction(keySelector);
             _ensureFunction(valueSelector);
@@ -1182,7 +1418,14 @@ var Linqer;
             }
             return result;
         }
-        /// creates an object from an enumerable
+        /**
+         * An optimized implementation of toObject
+         *
+         * @param {ISelector} keySelector
+         * @param {ISelector} [valueSelector=x => x]
+         * @returns {{ [key: string]: any }}
+         * @memberof OrderedEnumerable
+         */
         toObject(keySelector, valueSelector = x => x) {
             _ensureFunction(keySelector);
             _ensureFunction(valueSelector);
@@ -1193,7 +1436,12 @@ var Linqer;
             }
             return result;
         }
-        /// creates a set from an enumerable
+        /**
+         * An optimized implementation of to Set
+         *
+         * @returns {Set<any>}
+         * @memberof OrderedEnumerable
+         */
         toSet() {
             const result = new Set();
             const arr = this.toArray();

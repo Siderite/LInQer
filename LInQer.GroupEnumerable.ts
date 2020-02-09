@@ -3,12 +3,43 @@
 namespace Linqer {
 
 	export interface Enumerable extends Iterable<any> {
+		/**
+		 * Groups the elements of a sequence.
+		 *
+		 * @param {ISelector} keySelector
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		groupBy(keySelector: ISelector): Enumerable;
+		/**
+		 * Correlates the elements of two sequences based on key equality and groups the results. A specified equalityComparer is used to compare keys.
+		 * WARNING: using the equality comparer will be slower
+		 *
+		 * @param {IterableType} iterable
+		 * @param {ISelector} innerKeySelector
+		 * @param {ISelector} outerKeySelector
+		 * @param {(item1: any, item2: any) => any} resultSelector
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		groupJoin(iterable: IterableType,
 			innerKeySelector: ISelector,
 			outerKeySelector: ISelector,
 			resultSelector: (item1: any, item2: any) => any,
 			equalityComparer: IEqualityComparer): Enumerable;
+		/**
+		 * Correlates the elements of two sequences based on matching keys.
+		 * WARNING: using the equality comparer will be slower
+		 *
+		 * @param {IterableType} iterable
+		 * @param {ISelector} innerKeySelector
+		 * @param {ISelector} outerKeySelector
+		 * @param {(item1: any, item2: any) => any} resultSelector
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		join(iterable: IterableType,
 			innerKeySelector: ISelector,
 			outerKeySelector: ISelector,
@@ -128,6 +159,13 @@ namespace Linqer {
 		throw new Error('use groupBy instead of toLookup');
 	}
 
+	/**
+	 * An Enumerable that also exposes a group key
+	 *
+	 * @export
+	 * @class GroupEnumerable
+	 * @extends {Enumerable}
+	 */
 	export class GroupEnumerable extends Enumerable {
 		key: string;
 		constructor(iterable: IterableType, key: string) {

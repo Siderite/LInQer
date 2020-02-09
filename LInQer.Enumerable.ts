@@ -3,35 +3,230 @@
 namespace Linqer {
 
 	export interface Enumerable extends Iterable<any> {
+		/**
+		 * Applies an accumulator function over a sequence.
+		 * The specified seed value is used as the initial accumulator value, and the specified function is used to select the result value.
+		 *
+		 * @param {*} accumulator
+		 * @param {(acc: any, item: any) => any} aggregator
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		aggregate(accumulator: any, aggregator: (acc: any, item: any) => any): any;
+		/**
+		 * Determines whether all elements of a sequence satisfy a condition.
+		 * @param condition 
+		 * @returns true if all 
+		 */
 		all(condition: IFilter): boolean;
+		/**
+		 * Determines whether any element of a sequence exists or satisfies a condition.
+		 *
+		 * @param {IFilter} condition
+		 * @returns {boolean}
+		 * @memberof Enumerable
+		 */
 		any(condition: IFilter): boolean;
+		/**
+		 * Appends a value to the end of the sequence.
+		 *
+		 * @param {*} item
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		append(item: any): Enumerable;
+		/**
+		 * Computes the average of a sequence of numeric values.
+		 *
+		 * @returns {(number | undefined)}
+		 * @memberof Enumerable
+		 */
 		average(): number | undefined;
+		/**
+		 * Returns itself
+		 *
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		asEnumerable(): Enumerable;
+		/**
+ 		 * Checks the elements of a sequence based on their type
+		 *  If type is a string, it will check based on typeof, else it will use instanceof.
+		 *  Throws if types are different.
+		 * @param {(string | Function)} type
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		cast(type: string | Function): Enumerable;
+		/**
+		 * Determines whether a sequence contains a specified element.
+		 * A custom function can be used to determine equality between elements.
+		 *
+		 * @param {*} item
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {boolean}
+		 * @memberof Enumerable
+		 */
 		contains(item: any, equalityComparer: IEqualityComparer): boolean;
 		defaultIfEmpty(): never;
+		/**
+		 * Produces the set difference of two sequences
+		 * WARNING: using the comparer is slower
+		 *
+		 * @param {IterableType} iterable
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		except(iterable: IterableType, equalityComparer: IEqualityComparer): Enumerable;
+		/**
+		 * Produces the set intersection of two sequences.
+		 * WARNING: using a comparer is slower
+		 *
+		 * @param {IterableType} iterable
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		intersect(iterable: IterableType, equalityComparer: IEqualityComparer): Enumerable;
+		/**
+		 * Same as count
+		 *
+		 * @returns {number}
+		 * @memberof Enumerable
+		 */
 		longCount(): number;
+		/**
+		 * Filters the elements of a sequence based on their type
+		 * If type is a string, it will filter based on typeof, else it will use instanceof
+		 *
+		 * @param {(string | Function)} type
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		ofType(type: string | Function): Enumerable;
+		/**
+		 * Adds a value to the beginning of the sequence.
+		 *
+		 * @param {*} item
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		prepend(item: any): Enumerable;
+		/**
+		 * Inverts the order of the elements in a sequence.
+		 *
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		reverse(): Enumerable;
+		/**
+		 * Projects each element of a sequence to an iterable and flattens the resulting sequences into one sequence.
+		 *
+		 * @param {ISelector<IterableType>} selector
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		selectMany(selector: ISelector<IterableType>): Enumerable;
+		/**
+		 * Determines whether two sequences are equal and in the same order according to an optional equality comparer.
+		 *
+		 * @param {IterableType} iterable
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {boolean}
+		 * @memberof Enumerable
+		 */
 		sequenceEqual(iterable: IterableType, equalityComparer: IEqualityComparer): boolean;
+		/**
+		 * Returns the single element of a sequence and throws if it doesn't have exactly one
+		 *
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		single(): any;
+		/**
+		 * Returns the single element of a sequence or undefined if none found. It throws if the sequence contains multiple items.
+		 *
+		 * @returns {(any | undefined)}
+		 * @memberof Enumerable
+		 */
 		singleOrDefault(): any | undefined;
+		/**
+		 * Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
+		 *
+		 * @param {number} nr
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		skipLast(nr: number): Enumerable;
+		/**
+		 * Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
+		 *
+		 * @param {IFilter} condition
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		skipWhile(condition: IFilter): Enumerable;
+		/**
+		 * Returns a new enumerable collection that contains the last nr elements from source.
+		 *
+		 * @param {number} nr
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		takeLast(nr: number): Enumerable;
+		/**
+		 * Returns elements from a sequence as long as a specified condition is true, and then skips the remaining elements.
+		 *
+		 * @param {IFilter} condition
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		takeWhile(condition: IFilter): Enumerable;
 		toDictionary(): never;
+		/**
+		 * creates a Map from an Enumerable
+		 *
+		 * @param {ISelector} keySelector
+		 * @param {ISelector} valueSelector
+		 * @returns {Map<any, any>}
+		 * @memberof Enumerable
+		 */
 		toMap(keySelector: ISelector, valueSelector: ISelector): Map<any, any>;
+		/**
+		 * creates an object from an Enumerable
+		 *
+		 * @param {ISelector} keySelector
+		 * @param {ISelector} valueSelector
+		 * @returns {{ [key: string]: any }}
+		 * @memberof Enumerable
+		 */
 		toObject(keySelector: ISelector, valueSelector: ISelector): { [key: string]: any };
 		toHashSet(): never;
+		/**
+		 * creates a Set from an enumerable
+		 *
+		 * @returns {Set<any>}
+		 * @memberof Enumerable
+		 */
 		toSet(): Set<any>;
+		/**
+		 * Produces the set union of two sequences.
+		 *
+		 * @param {IterableType} iterable
+		 * @param {IEqualityComparer} equalityComparer
+		 * @returns {Enumerable}
+		 * @memberof Enumerable
+		 */
 		union(iterable: IterableType, equalityComparer: IEqualityComparer): Enumerable;
+		/**
+		 * Applies a specified function to the corresponding elements of two sequences, producing a sequence of the results.
+		 *
+		 * @param {IterableType} iterable
+		 * @param {(item1: any, item2: any, index: number) => any} zipper
+		 * @returns {*}
+		 * @memberof Enumerable
+		 */
 		zip(iterable: IterableType, zipper: (item1: any, item2: any, index: number) => any): any;
 
 	}
