@@ -43,8 +43,8 @@ namespace Linqer {
 
 
 	//static sort: (arr: any[], comparer?: IComparer) => void;
-	Enumerable.sort = function(arr:any[], comparer:IComparer=_defaultComparer):any[] {
-		_quicksort(arr,0,arr.length-1,comparer,0,Number.MAX_SAFE_INTEGER);
+	Enumerable.sort = function (arr: any[], comparer: IComparer = _defaultComparer): any[] {
+		_quickSort(arr, 0, arr.length - 1, comparer, 0, Number.MAX_SAFE_INTEGER);
 		return arr;
 	}
 
@@ -74,7 +74,7 @@ namespace Linqer {
 				const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, arr.length);
 				if (startIndex < endIndex) {
 					const sort: (item1: any, item2: any) => void = this._useQuickSort
-						? (a, c) => _quicksort(a, 0, a.length - 1, c, startIndex, endIndex)
+						? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
 						: (a, c) => a.sort(c);
 					const sortFunc = this.generateSortFunc(self._keySelectors);
 					sort(arr, sortFunc);
@@ -106,7 +106,7 @@ namespace Linqer {
 					: (i1: any, i2: any) => -comparer(i1, i2);
 			});
 			return (i1: any, i2: any) => {
-				for (let i=0; i<comparers.length; i++) {
+				for (let i = 0; i < comparers.length; i++) {
 					const v = comparers[i](i1, i2);
 					if (v) return v;
 				}
@@ -171,8 +171,6 @@ namespace Linqer {
 	function _ensureFunction(f: Function): void {
 		if (!f || typeof f !== 'function') throw new Error('the argument needs to be a function!');
 	}
-
-
 	function _insertionsort(arr: any[], leftIndex: number, rightIndex: number, comparer: IComparer) {
 		for (let j = leftIndex; j <= rightIndex; j++) {
 			// Invariant: arr[:j] contains the same elements as
@@ -187,58 +185,53 @@ namespace Linqer {
 		}
 	}
 
-	/* This QuickSort requires O(Log n) auxiliary space in worst case. */
-	function _quicksort(arr: any[], leftIndex: number, rightIndex: number, comparer: IComparer = _defaultComparer, minIndex: number, maxIndex: number) {
-		if (minIndex > rightIndex || maxIndex < leftIndex) return;
-		const delta = rightIndex - leftIndex;
-		if (delta > 0 && delta < 30) {
-			_insertionsort(arr, leftIndex, rightIndex, comparer);
-			return;
-		}
-		while (leftIndex < rightIndex) {
-			/* pi is partitioning index, arr[p] is now at right place */
-			if (minIndex > rightIndex || maxIndex < leftIndex) break;
-			const pi = _partition(arr, leftIndex, rightIndex, comparer);
-
-			// If left part is smaller, then recur for left 
-			// part and handle right part iteratively 
-			if (pi - leftIndex < rightIndex - pi) {
-				_quicksort(arr, leftIndex, pi - 1, comparer, minIndex, maxIndex);
-				leftIndex = pi + 1;
-			}
-			// Else recur for right part 
-			else {
-				_quicksort(arr, pi + 1, rightIndex, comparer, minIndex, maxIndex);
-				rightIndex = pi - 1;
-			}
-		}
-	}
-
-	/* This function takes last element as pivot, places
-	   the pivot element at its correct position in sorted
-		array, and places all smaller (smaller than pivot)
-	   to left of pivot and all greater elements to right
-	   of pivot */
-	function _partition(arr: any[], leftIndex: number, rightIndex: number, comparer: IComparer = _defaultComparer) {
-		const pivot = arr[rightIndex];    // pivot
-		let i = (leftIndex - 1);  // Index of smaller element
-
-		for (let j = leftIndex; j <= rightIndex - 1; j++) {
-			// If current element is smaller than or
-			// equal to pivot
-			if (comparer(arr[j], pivot) <= 0) {
-				i++;    // increment index of smaller element
-				_swapArrayItems(arr, i, j);
-			}
-		}
-		_swapArrayItems(arr, i + 1, rightIndex);
-		return (i + 1);
-	}
-
-
 	function _swapArrayItems(array: any[], leftIndex: number, rightIndex: number): void {
 		const temp = array[leftIndex];
 		array[leftIndex] = array[rightIndex];
 		array[rightIndex] = temp;
 	}
+	function _partition(items: any[], left: number, right: number, comparer: IComparer) {
+		if (right - left<64) {
+			_insertionsort(items,left,right,comparer);
+			return right;
+		}
+		const pivot = items[(right + left) >> 1];
+		while (left <= right) {
+			while (comparer(items[left], pivot) < 0) {
+				left++;
+			}
+			while (comparer(items[right], pivot) > 0) {
+				right--;
+			}
+			if (left < right) {
+				_swapArrayItems(items, left, right);
+				left++;
+				right--;
+			} else {
+				if (left === right) return left + 1;
+			}
+		}
+		return left;
+	}
+
+	function _quickSort(items: any[], left: number, right: number, comparer: IComparer = _defaultComparer, minIndex: number = 0, maxIndex: number = Number.MAX_SAFE_INTEGER) {
+		if (!items.length) return items;
+
+		const partitions = [];
+		partitions.push([left, right]);
+		let partitionIndex = 0;
+		while (partitionIndex < partitions.length) {
+			[left, right] = partitions[partitionIndex];
+			const index = _partition(items, left, right, comparer); //index returned from partition
+			if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+				partitions.push([left, index - 1]);
+			}
+			if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+				partitions.push([index, right]);
+			}
+			partitionIndex++;
+		}
+		return items;
+	}
+
 }

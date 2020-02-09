@@ -122,8 +122,8 @@ var Linqer;
                     const values = [];
                     for (const item of self) {
                         let unique = true;
-                        for (const prevItem of values) {
-                            if (equalityComparer(item, prevItem)) {
+                        for (let i = 0; i < values.length; i++) {
+                            if (equalityComparer(item, values[i])) {
                                 unique = false;
                                 break;
                             }

@@ -120,8 +120,8 @@ namespace Linqer {
 				const values = _toArray(iterable);
 				for (const item of self) {
 					let unique = true;
-					for (const value of values) {
-						if (equalityComparer(item, value)) {
+					for (let i=0; i<values.length; i++) {
+						if (equalityComparer(item, values[i])) {
 							unique = false;
 							break;
 						}
@@ -147,8 +147,8 @@ namespace Linqer {
 				const values = _toArray(iterable);
 				for (const item of self) {
 					let unique = true;
-					for (const value of values) {
-						if (equalityComparer(item, value)) {
+					for (let i=0; i<values.length; i++) {
+						if (equalityComparer(item, values[i])) {
 							unique = false;
 							break;
 						}

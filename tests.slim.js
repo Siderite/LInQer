@@ -243,24 +243,3 @@ QUnit.test("take seek", function (assert) {
     assert.deepEqual(result.elementAtOrDefault(1000000), undefined, "Passed!");
     assert.deepEqual(result._wasIterated, false, "Passed!");
 });
-
-// performance tests
-QUnit.module('performance tests');
-
-QUnit.test("Use only items that are required - standard", function (assert) {
-    const largeArray = Array(10000000).fill(10);
-    const startTime = performance.now();
-    const someCalculation = largeArray.filter(x => x === 10).map(x => 'v' + x).slice(100, 110);
-    Array.from(someCalculation);
-    const endTime = performance.now();
-    assert.ok(true, 'Standard array use took ' + (endTime - startTime) + 'milliseconds');
-});
-
-QUnit.test("Use only items that are required - Enumerable", function (assert) {
-    const largeArray = Array(10000000).fill(10);
-    const startTime = performance.now();
-    const someCalculation = Enumerable.from(largeArray).where(x => x === 10).select(x => 'v' + x).skip(100).take(10).toArray();
-    Array.from(someCalculation);
-    const endTime = performance.now();
-    assert.ok(true, 'Enumerable use took ' + (endTime - startTime) + 'milliseconds');
-});
