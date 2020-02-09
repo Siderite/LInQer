@@ -5,16 +5,93 @@
 namespace Linqer {
 
     export interface Enumerable extends Iterable<any> {
+        /**
+         * Returns a randomized sequence of items from an initial source
+         * @returns shuffle 
+         */
         shuffle(): Enumerable;
+        /**
+         * implements random reservoir sampling of k items, with the option to specify a maximum limit for the items
+         * @param k 
+         * @param limit 
+         * @returns sample 
+         */
         randomSample(k: number, limit: number): Enumerable;
+        /**
+         * Returns the count of the items in a sequence. Depending on the sequence type this iterates through it or not.
+         * @returns count 
+         */
         count(): number;
+        /**
+         * returns the distinct values based on a hashing function
+         *
+         * @param {ISelector} hashFunc
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         distinctByHash(hashFunc: ISelector): Enumerable;
+        /**
+         * returns the values that have different hashes from the items of the iterable provided
+         *
+         * @param {IterableType} iterable
+         * @param {ISelector} hashFunc
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         exceptByHash(iterable: IterableType, hashFunc: ISelector): Enumerable;
+        /**
+         * returns the values that have the same hashes as items of the iterable provided
+         *
+         * @param {IterableType} iterable
+         * @param {ISelector} hashFunc
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         intersectByHash(iterable: IterableType, hashFunc: ISelector): Enumerable;
+        /**
+         * returns the index of a value in an ordered enumerable or false if not found
+         * WARNING: use the same comparer as the one used to order the enumerable. The algorithm assumes the enumerable is already sorted.
+         *
+         * @param {*} value
+         * @param {IComparer} comparer
+         * @returns {(number | boolean)}
+         * @memberof Enumerable
+         */
         binarySearch(value: any, comparer: IComparer): number | boolean;
+        /**
+         * joins each item of the enumerable with previous items from the same enumerable
+         * @param offset 
+         * @param zipper 
+         * @returns lag 
+         */
         lag(offset: number, zipper: (item1: any, item2: any) => any): Enumerable;
+        /**
+         * joins each item of the enumerable with next items from the same enumerable
+         *
+         * @param {number} offset
+         * @param {(item1: any, item2: any) => any} zipper
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         lead(offset: number, zipper: (item1: any, item2: any) => any): Enumerable;
+        /**
+         * returns an enumerable of at least minLength, padding the end with a value or the result of a function
+         *
+         * @param {number} minLength
+         * @param {(any | ((index: number) => any))} filler
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         padEnd(minLength: number, filler: any | ((index: number) => any)): Enumerable;
+        /**
+         * returns an enumerable of at least minLength, padding the start with a value or the result of a function
+         * if the enumerable cannot seek, then it will be iterated minLength time
+         *
+         * @param {number} minLength
+         * @param {(any | ((index: number) => any))} filler
+         * @returns {Enumerable}
+         * @memberof Enumerable
+         */
         padStart(minLength: number, filler: any | ((index: number) => any)): Enumerable;
     }
 
