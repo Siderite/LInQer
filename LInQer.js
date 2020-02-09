@@ -1037,14 +1037,8 @@ var Linqer;
             }
             const self = this;
             this._generator = function* () {
-                const arr = Array.from(this._src);
-                const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, arr.length);
-                if (startIndex < endIndex) {
-                    const sort = this._useQuickSort
-                        ? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
-                        : (a, c) => a.sort(c);
-                    const sortFunc = this.generateSortFunc(self._keySelectors);
-                    sort(arr, sortFunc);
+                let { startIndex, endIndex, arr } = this.getSortedArray();
+                if (arr) {
                     for (let index = startIndex; index < endIndex; index++) {
                         yield arr[index];
                     }
@@ -1055,6 +1049,42 @@ var Linqer;
                 const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, totalCount);
                 return endIndex - startIndex;
             };
+        }
+        getSortedArray() {
+            const self = this;
+            Linqer._ensureInternalTryGetAt(self);
+            let startIndex;
+            let endIndex;
+            let arr = null;
+            if (self._canSeek) {
+                ({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, self.count()));
+            }
+            else {
+                arr = Array.from(self._src);
+                ({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, arr.length));
+            }
+            if (startIndex < endIndex) {
+                if (!arr) {
+                    const arr = Array.from(self._src);
+                }
+                const sort = self._useQuickSort
+                    ? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
+                    : (a, c) => a.sort(c);
+                const sortFunc = self.generateSortFunc(self._keySelectors);
+                sort(arr, sortFunc);
+                return {
+                    startIndex,
+                    endIndex,
+                    arr
+                };
+            }
+            else {
+                return {
+                    startIndex,
+                    endIndex,
+                    arr: null
+                };
+            }
         }
         generateSortFunc(selectors) {
             const comparers = selectors.map(s => {
@@ -1072,14 +1102,16 @@ var Linqer;
                     ? comparer
                     : (i1, i2) => -comparer(i1, i2);
             });
-            return (i1, i2) => {
-                for (let i = 0; i < comparers.length; i++) {
-                    const v = comparers[i](i1, i2);
-                    if (v)
-                        return v;
-                }
-                return 0;
-            };
+            return comparers.length == 1
+                ? comparers[0]
+                : (i1, i2) => {
+                    for (let i = 0; i < comparers.length; i++) {
+                        const v = comparers[i](i1, i2);
+                        if (v)
+                            return v;
+                    }
+                    return 0;
+                };
         }
         getStartAndEndIndexes(restrictions, arrLength) {
             let startIndex = 0;
@@ -1132,6 +1164,44 @@ var Linqer;
             this._restrictions.push({ type: RestrictionType.skipLast, nr: nr });
             return this;
         }
+        /// creates an array from an Enumerable
+        toArray() {
+            const { startIndex, endIndex, arr } = this.getSortedArray();
+            return arr
+                ? arr.slice(startIndex, endIndex)
+                : [];
+        }
+        /// creates a map from an Enumerable
+        toMap(keySelector, valueSelector = x => x) {
+            _ensureFunction(keySelector);
+            _ensureFunction(valueSelector);
+            const result = new Map();
+            const arr = this.toArray();
+            for (let i = 0; i < arr.length; i++) {
+                result.set(keySelector(arr[i], i), valueSelector(arr[i], i));
+            }
+            return result;
+        }
+        /// creates an object from an enumerable
+        toObject(keySelector, valueSelector = x => x) {
+            _ensureFunction(keySelector);
+            _ensureFunction(valueSelector);
+            const result = {};
+            const arr = this.toArray();
+            for (let i = 0; i < arr.length; i++) {
+                result[keySelector(arr[i], i)] = valueSelector(arr[i], i);
+            }
+            return result;
+        }
+        /// creates a set from an enumerable
+        toSet() {
+            const result = new Set();
+            const arr = this.toArray();
+            for (let i = 0; i < arr.length; i++) {
+                result.add(arr[i]);
+            }
+            return result;
+        }
     }
     Linqer.OrderedEnumerable = OrderedEnumerable;
     function _ensureFunction(f) {
@@ -1157,10 +1227,6 @@ var Linqer;
         array[rightIndex] = temp;
     }
     function _partition(items, left, right, comparer) {
-        if (right - left < 64) {
-            _insertionsort(items, left, right, comparer);
-            return right;
-        }
         const pivot = items[(right + left) >> 1];
         while (left <= right) {
             while (comparer(items[left], pivot) < 0) {
@@ -1181,22 +1247,36 @@ var Linqer;
         }
         return left;
     }
+    const _insertionSortThreshold = 64;
     function _quickSort(items, left, right, comparer = Linqer._defaultComparer, minIndex = 0, maxIndex = Number.MAX_SAFE_INTEGER) {
         if (!items.length)
             return items;
         const partitions = [];
-        partitions.push([left, right]);
+        partitions.push({ left, right });
         let partitionIndex = 0;
         while (partitionIndex < partitions.length) {
-            [left, right] = partitions[partitionIndex];
-            const index = _partition(items, left, right, comparer); //index returned from partition
-            if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
-                partitions.push([left, index - 1]);
+            const partition = { left, right } = partitions[partitionIndex];
+            if (right - left < _insertionSortThreshold) {
+                _insertionsort(items, left, right, comparer);
+                partitionIndex++;
             }
-            if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-                partitions.push([index, right]);
+            else {
+                const index = _partition(items, left, right, comparer); //index returned from partition
+                if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+                    partition.right = index - 1;
+                    if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+                        partitions.push({ left: index, right });
+                    }
+                }
+                else {
+                    if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+                        partition.left = index;
+                    }
+                    else {
+                        partitionIndex++;
+                    }
+                }
             }
-            partitionIndex++;
         }
         return items;
     }

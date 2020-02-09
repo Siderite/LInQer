@@ -70,14 +70,8 @@ namespace Linqer {
 			}
 			const self: OrderedEnumerable = this;
 			this._generator = function* () {
-				const arr = Array.from(this._src);
-				const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, arr.length);
-				if (startIndex < endIndex) {
-					const sort: (item1: any, item2: any) => void = this._useQuickSort
-						? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
-						: (a, c) => a.sort(c);
-					const sortFunc = this.generateSortFunc(self._keySelectors);
-					sort(arr, sortFunc);
+				let { startIndex, endIndex, arr } = this.getSortedArray();
+				if (arr) {
 					for (let index = startIndex; index < endIndex; index++) {
 						yield arr[index];
 					}
@@ -89,6 +83,41 @@ namespace Linqer {
 				const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, totalCount);
 				return endIndex - startIndex;
 			};
+		}
+
+		private getSortedArray() {
+			const self = this;
+			_ensureInternalTryGetAt(self);
+			let startIndex: number;
+			let endIndex: number;
+			let arr: any[] | null = null;
+			if (self._canSeek) {
+				({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, self.count()));
+			} else {
+				arr = Array.from(self._src);
+				({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, arr.length));
+			}
+			if (startIndex < endIndex) {
+				if (!arr) {
+					const arr = Array.from(self._src);
+				}
+				const sort: (item1: any, item2: any) => void = self._useQuickSort
+					? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
+					: (a, c) => a.sort(c);
+				const sortFunc = self.generateSortFunc(self._keySelectors);
+				sort(arr, sortFunc);
+				return {
+					startIndex,
+					endIndex,
+					arr
+				};
+			} else {
+				return {
+					startIndex,
+					endIndex,
+					arr: null
+				};
+			}
 		}
 
 		private generateSortFunc(selectors: { keySelector: ISelector, ascending: boolean }[]): (i1: any, i2: any) => number {
@@ -105,13 +134,15 @@ namespace Linqer {
 					? comparer
 					: (i1: any, i2: any) => -comparer(i1, i2);
 			});
-			return (i1: any, i2: any) => {
-				for (let i = 0; i < comparers.length; i++) {
-					const v = comparers[i](i1, i2);
-					if (v) return v;
-				}
-				return 0;
-			};
+			return comparers.length == 1
+				? comparers[0]
+				: (i1: any, i2: any) => {
+					for (let i = 0; i < comparers.length; i++) {
+						const v = comparers[i](i1, i2);
+						if (v) return v;
+					}
+					return 0;
+				};
 		}
 
 		private getStartAndEndIndexes(restrictions: { type: RestrictionType, nr: number }[], arrLength: number) {
@@ -166,6 +197,49 @@ namespace Linqer {
 			this._restrictions.push({ type: RestrictionType.skipLast, nr: nr });
 			return this;
 		}
+
+		/// creates an array from an Enumerable
+		toArray(): any[] {
+			const { startIndex, endIndex, arr } = this.getSortedArray();
+			return arr
+				? arr.slice(startIndex, endIndex)
+				: [];
+		}
+
+		/// creates a map from an Enumerable
+		toMap(keySelector: ISelector, valueSelector: ISelector = x => x): Map<any, any> {
+			_ensureFunction(keySelector);
+			_ensureFunction(valueSelector);
+			const result = new Map<any, any>();
+			const arr = this.toArray();
+			for (let i=0; i<arr.length; i++) {
+				result.set(keySelector(arr[i], i), valueSelector(arr[i], i));
+			}
+			return result;
+		}
+
+		/// creates an object from an enumerable
+		toObject(keySelector: ISelector, valueSelector: ISelector = x => x): { [key: string]: any } {
+			_ensureFunction(keySelector);
+			_ensureFunction(valueSelector);
+			const result: { [key: string]: any } = {};
+			const arr = this.toArray();
+			for (let i=0; i<arr.length; i++) {
+				result[keySelector(arr[i], i)]= valueSelector(arr[i], i);
+			}
+			return result;
+		}
+
+		/// creates a set from an enumerable
+		toSet(): Set<any> {
+			const result = new Set<any>();
+			const arr = this.toArray();
+			for (let i=0; i<arr.length; i++) {
+				result.add(arr[i]);
+			}
+			return result;
+		}
+
 	}
 
 	function _ensureFunction(f: Function): void {
@@ -191,10 +265,6 @@ namespace Linqer {
 		array[rightIndex] = temp;
 	}
 	function _partition(items: any[], left: number, right: number, comparer: IComparer) {
-		if (right - left<64) {
-			_insertionsort(items,left,right,comparer);
-			return right;
-		}
 		const pivot = items[(right + left) >> 1];
 		while (left <= right) {
 			while (comparer(items[left], pivot) < 0) {
@@ -214,22 +284,34 @@ namespace Linqer {
 		return left;
 	}
 
+	const _insertionSortThreshold = 64;
+
 	function _quickSort(items: any[], left: number, right: number, comparer: IComparer = _defaultComparer, minIndex: number = 0, maxIndex: number = Number.MAX_SAFE_INTEGER) {
 		if (!items.length) return items;
 
-		const partitions = [];
-		partitions.push([left, right]);
+		const partitions: { left: number, right: number }[] = [];
+		partitions.push({ left, right });
 		let partitionIndex = 0;
 		while (partitionIndex < partitions.length) {
-			[left, right] = partitions[partitionIndex];
-			const index = _partition(items, left, right, comparer); //index returned from partition
-			if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
-				partitions.push([left, index - 1]);
+			const partition = { left, right } = partitions[partitionIndex];
+			if (right - left < _insertionSortThreshold) {
+				_insertionsort(items, left, right, comparer);
+				partitionIndex++;
+			} else {
+				const index = _partition(items, left, right, comparer); //index returned from partition
+				if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+					partition.right = index - 1;
+					if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+						partitions.push({ left: index, right });
+					}
+				} else {
+					if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+						partition.left = index;
+					} else {
+						partitionIndex++;
+					}
+				}
 			}
-			if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-				partitions.push([index, right]);
-			}
-			partitionIndex++;
 		}
 		return items;
 	}
