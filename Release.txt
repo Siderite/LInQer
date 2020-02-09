@@ -1,3 +1,8 @@
+2020-02-09 - 1.1.1
+	- separated the performance tests in their own files
+	- small performance improvements
+	- reverted the Quicksort algorithm to its original version
+	- tried Timsort, it's pretty cool, but large and hard to control
 2020-02-06 - 1.1.0
 	- change of algorithm for sorting
 	- useQuickSort and useBrowserSort now just set the sort mechanism, QuickSort is default
