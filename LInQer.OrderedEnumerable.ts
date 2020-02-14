@@ -207,7 +207,7 @@ namespace Linqer {
 			return { startIndex, endIndex };
 		}
 
-		
+
 		/**
 		 * Performs a subsequent ordering of the elements in a sequence in ascending order.
 		 *
@@ -230,7 +230,7 @@ namespace Linqer {
 			this._keySelectors.push({ keySelector: keySelector, ascending: false });
 			return this;
 		}
-		 
+
 		/**
 		 * Deferred and optimized implementation of take
 		 *
@@ -242,7 +242,7 @@ namespace Linqer {
 			this._restrictions.push({ type: RestrictionType.take, nr: nr });
 			return this;
 		}
-		
+
 		/**
 		 * Deferred and optimized implementation of takeLast
 		 *
@@ -254,7 +254,7 @@ namespace Linqer {
 			this._restrictions.push({ type: RestrictionType.takeLast, nr: nr });
 			return this;
 		}
-		
+
 		/**
 		 * Deferred and optimized implementation of skip
 		 *
@@ -266,7 +266,7 @@ namespace Linqer {
 			this._restrictions.push({ type: RestrictionType.skip, nr: nr });
 			return this;
 		}
-		
+
 		/**
 		 * Deferred and optimized implementation of skipLast
 		 *
@@ -279,7 +279,7 @@ namespace Linqer {
 			return this;
 		}
 
-		
+
 		/**
 		 * An optimized implementation of toArray
 		 *
@@ -293,7 +293,7 @@ namespace Linqer {
 				: [];
 		}
 
-		
+
 		/**
 		 * An optimized implementation of toMap
 		 *
@@ -307,13 +307,13 @@ namespace Linqer {
 			_ensureFunction(valueSelector);
 			const result = new Map<any, any>();
 			const arr = this.toArray();
-			for (let i=0; i<arr.length; i++) {
+			for (let i = 0; i < arr.length; i++) {
 				result.set(keySelector(arr[i], i), valueSelector(arr[i], i));
 			}
 			return result;
 		}
 
-		
+
 		/**
 		 * An optimized implementation of toObject
 		 *
@@ -327,13 +327,13 @@ namespace Linqer {
 			_ensureFunction(valueSelector);
 			const result: { [key: string]: any } = {};
 			const arr = this.toArray();
-			for (let i=0; i<arr.length; i++) {
-				result[keySelector(arr[i], i)]= valueSelector(arr[i], i);
+			for (let i = 0; i < arr.length; i++) {
+				result[keySelector(arr[i], i)] = valueSelector(arr[i], i);
 			}
 			return result;
 		}
 
-		
+
 		/**
 		 * An optimized implementation of to Set
 		 *
@@ -343,7 +343,7 @@ namespace Linqer {
 		toSet(): Set<any> {
 			const result = new Set<any>();
 			const arr = this.toArray();
-			for (let i=0; i<arr.length; i++) {
+			for (let i = 0; i < arr.length; i++) {
 				result.add(arr[i]);
 			}
 			return result;
@@ -400,26 +400,18 @@ namespace Linqer {
 
 		const partitions: { left: number, right: number }[] = [];
 		partitions.push({ left, right });
-		let partitionIndex = 0;
-		while (partitionIndex < partitions.length) {
-			const partition = { left, right } = partitions[partitionIndex];
+		while (partitions.length) {
+			({ left, right } = partitions.pop()!);
 			if (right - left < _insertionSortThreshold) {
 				_insertionsort(items, left, right, comparer);
-				partitionIndex++;
-			} else {
-				const index = _partition(items, left, right, comparer); //index returned from partition
-				if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
-					partition.right = index - 1;
-					if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-						partitions.push({ left: index, right });
-					}
-				} else {
-					if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-						partition.left = index;
-					} else {
-						partitionIndex++;
-					}
-				}
+				continue;
+			}
+			const index = _partition(items, left, right, comparer);
+			if (left < index - 1 && index - 1 >= minIndex) {
+				partitions.push({ left, right: index - 1 });
+			}
+			if (index < right && index < maxIndex) {
+				partitions.push({ left: index, right });
 			}
 		}
 		return items;
