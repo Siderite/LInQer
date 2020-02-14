@@ -1501,29 +1501,18 @@ var Linqer;
             return items;
         const partitions = [];
         partitions.push({ left, right });
-        let partitionIndex = 0;
-        while (partitionIndex < partitions.length) {
-            const partition = { left, right } = partitions[partitionIndex];
+        while (partitions.length) {
+            ({ left, right } = partitions.pop());
             if (right - left < _insertionSortThreshold) {
                 _insertionsort(items, left, right, comparer);
-                partitionIndex++;
+                continue;
             }
-            else {
-                const index = _partition(items, left, right, comparer); //index returned from partition
-                if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
-                    partition.right = index - 1;
-                    if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-                        partitions.push({ left: index, right });
-                    }
-                }
-                else {
-                    if (index < right && index < maxIndex) { //more elements on the right side of the pivot
-                        partition.left = index;
-                    }
-                    else {
-                        partitionIndex++;
-                    }
-                }
+            const index = _partition(items, left, right, comparer);
+            if (left < index - 1 && index - 1 >= minIndex) {
+                partitions.push({ left, right: index - 1 });
+            }
+            if (index < right && index < maxIndex) {
+                partitions.push({ left: index, right });
             }
         }
         return items;

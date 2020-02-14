@@ -1,3 +1,5 @@
+2020-02-13 - 1.1.4
+	- Simplified the partition stack code
 2020-02-09 - 1.1.3
 	- Added typings for Intellisense in TypeScript
 2020-02-09 - 1.1.2
