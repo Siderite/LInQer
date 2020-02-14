@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 Enumerable = Linqer.Enumerable;
 
 // object and method tests
@@ -417,6 +418,42 @@ QUnit.test( "Enumerable.skipWhile", function( assert ) {
     assert.deepEqual( result,[3,2,1], "Passed!" );
 });
 
+QUnit.test( "Enumerable.slice empty", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice().toArray();
+    assert.deepEqual( result,arr.slice(), "Passed!" );
+});
+QUnit.test( "Enumerable.slice positive", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice(2).toArray();
+    assert.deepEqual( result,arr.slice(2), "Passed!" );
+});
+QUnit.test( "Enumerable.slice positive positive", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice(2,4).toArray();
+    assert.deepEqual( result,arr.slice(2,4), "Passed!" );
+});
+QUnit.test( "Enumerable.slice negative", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice(-2).toArray();
+    assert.deepEqual( result,arr.slice(-2), "Passed!" );
+});
+QUnit.test( "Enumerable.slice negative positive", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice(-2,4).toArray();
+    assert.deepEqual( result,arr.slice(-2,4), "Passed!" );
+});
+QUnit.test( "Enumerable.slice negative positive 2", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice(-4,2).toArray();
+    assert.deepEqual( result,arr.slice(-4,2), "Passed!" );
+});
+QUnit.test( "Enumerable.slice negative negative", function( assert ) {
+    const arr=[1,2,3,4,5];
+    const result = Enumerable.from(arr).slice(-4,-1).toArray();
+    assert.deepEqual( result,arr.slice(-4,-1), "Passed!" );
+});
+
 QUnit.test( "Enumerable.sum numbers", function( assert ) {
     const result = Enumerable.from([1,2,3,4,5]).sum();
     assert.deepEqual( result,15, "Passed!" );
@@ -807,7 +844,7 @@ QUnit.test( "Enumerable.binarySearch", function( assert ) {
     const result = Enumerable.range(1,10).select(i=>i*10).orderBy();
     assert.deepEqual(result._wasIterated, false,'Passed!');
     let index = result.binarySearch(80);
-    assert.deepEqual(result._wasIterated, true,'Passed!');
+    assert.deepEqual(result._wasIterated, false,'Passed!');
     assert.deepEqual(index, 7,'Passed!');
     index = result.binarySearch(45);
     assert.deepEqual(index, false,'Passed!');

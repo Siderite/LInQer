@@ -1,3 +1,7 @@
+2020-02-14 - 1.1.5
+	- fixed a few bugs
+	- added slice
+	- added splice and length, however Enumerable is not seen as an Array-like object, because length is a property not a field
 2020-02-13 - 1.1.4
 	- Simplified the partition stack code
 2020-02-09 - 1.1.3

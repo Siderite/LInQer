@@ -121,6 +121,15 @@ var Linqer;
             return result;
         }
         /**
+         * Same value as count(), but will throw an Error if enumerable is not seekable and has to be iterated to get the length
+         */
+        get length() {
+            _ensureInternalTryGetAt(this);
+            if (!this._canSeek)
+                throw new Error('Calling length on this enumerable will iterate it. Use count()');
+            return this.count();
+        }
+        /**
          * Concatenates two sequences by appending iterable to the existing one.
          *
          * @param {IterableType} iterable
@@ -400,6 +409,17 @@ var Linqer;
             return result;
         }
         /**
+         * Takes start elements, ignores howmany elements, continues with the new items and continues with the original enumerable
+         * Equivalent to the value of an array after performing splice on it with the same parameters
+         * @param start
+         * @param howmany
+         * @param items
+         * @returns splice
+         */
+        splice(start, howmany, ...newItems) {
+            return this.take(start).concat(newItems).concat(this.skip(start + howmany));
+        }
+        /**
          * Computes the sum of a sequence of numeric values.
          *
          * @returns {(number | undefined)}
@@ -539,6 +559,12 @@ var Linqer;
     function _ensureInternalCount(enumerable) {
         if (enumerable._count)
             return;
+        if (enumerable._src instanceof Enumerable) {
+            const innerEnumerable = enumerable._src;
+            _ensureInternalCount(innerEnumerable);
+            enumerable._count = () => innerEnumerable._count();
+            return;
+        }
         const src = enumerable._src;
         if (typeof src !== 'function' && typeof src.length === 'number') {
             enumerable._count = () => src.length;
@@ -560,6 +586,13 @@ var Linqer;
         if (enumerable._tryGetAt)
             return;
         enumerable._canSeek = true;
+        if (enumerable._src instanceof Enumerable) {
+            const innerEnumerable = enumerable._src;
+            _ensureInternalTryGetAt(innerEnumerable);
+            enumerable._tryGetAt = index => innerEnumerable._tryGetAt(index);
+            enumerable._canSeek = innerEnumerable._canSeek;
+            return;
+        }
         if (typeof enumerable._src === 'string') {
             enumerable._tryGetAt = index => {
                 if (index < enumerable._src.length) {
@@ -849,6 +882,34 @@ var Linqer;
         if (!val.done)
             throw new Error('Sequence contains more than one element');
         return result;
+    };
+    /// Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
+    Linqer.Enumerable.prototype.slice = function (start = 0, end) {
+        let enumerable = this;
+        if (end !== undefined && end >= 0 && (start || 0) < 0) {
+            Linqer._ensureInternalTryGetAt(enumerable);
+            if (!enumerable._canSeek) {
+                enumerable = Linqer.Enumerable.from(enumerable.toArray());
+            }
+            start = enumerable.count() + start;
+        }
+        if (start !== 0) {
+            if (start > 0) {
+                enumerable = enumerable.skip(start);
+            }
+            else {
+                enumerable = enumerable.takeLast(-start);
+            }
+        }
+        if (end !== undefined) {
+            if (end >= 0) {
+                enumerable = enumerable.take(end - start);
+            }
+            else {
+                enumerable = enumerable.skipLast(-end);
+            }
+        }
+        return enumerable;
     };
     /// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
     Linqer.Enumerable.prototype.skipLast = function (nr) {
@@ -1240,12 +1301,13 @@ var Linqer;
         }
         getSortedArray() {
             const self = this;
-            Linqer._ensureInternalTryGetAt(self);
             let startIndex;
             let endIndex;
             let arr = null;
-            if (self._canSeek) {
-                ({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, self.count()));
+            const innerEnumerable = self._src;
+            Linqer._ensureInternalTryGetAt(innerEnumerable);
+            if (innerEnumerable._canSeek) {
+                ({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, innerEnumerable.count()));
             }
             else {
                 arr = Array.from(self._src);
@@ -1253,7 +1315,7 @@ var Linqer;
             }
             if (startIndex < endIndex) {
                 if (!arr) {
-                    const arr = Array.from(self._src);
+                    arr = Array.from(self._src);
                 }
                 const sort = self._useQuickSort
                     ? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)

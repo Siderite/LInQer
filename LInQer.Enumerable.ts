@@ -68,7 +68,9 @@ namespace Linqer {
 		 * @memberof Enumerable
 		 */
 		contains(item: any, equalityComparer: IEqualityComparer): boolean;
+
 		defaultIfEmpty(): never;
+
 		/**
 		 * Produces the set difference of two sequences
 		 * WARNING: using the comparer is slower
@@ -167,6 +169,15 @@ namespace Linqer {
 		 * @memberof Enumerable
 		 */
 		skipWhile(condition: IFilter): Enumerable;
+
+		/**
+		 * Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
+		 * @param start 
+		 * @param end 
+		 * @returns slice 
+		 */
+		slice(start: number | undefined, end: number | undefined) : Enumerable;
+
 		/**
 		 * Returns a new enumerable collection that contains the last nr elements from source.
 		 *
@@ -460,6 +471,33 @@ namespace Linqer {
 		val = iterator.next();
 		if (!val.done) throw new Error('Sequence contains more than one element');
 		return result;
+	}
+
+	/// Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
+	Enumerable.prototype.slice = function (start: number = 0, end: number | undefined): Enumerable {
+		let enumerable: Enumerable = this;
+		if (end !== undefined && end >= 0 && (start || 0) < 0) {
+			_ensureInternalTryGetAt(enumerable);
+			if (!enumerable._canSeek) {
+				enumerable = Enumerable.from(enumerable.toArray());
+			}
+			start = enumerable.count() + start;
+		}
+		if (start !== 0) {
+			if (start > 0) {
+				enumerable = enumerable.skip(start);
+			} else {
+				enumerable = enumerable.takeLast(-start);
+			}
+		}
+		if (end !== undefined) {
+			if (end >= 0) {
+				enumerable = enumerable.take(end - start);
+			} else {
+				enumerable = enumerable.skipLast(-end);
+			}
+		}
+		return enumerable;
 	}
 
 	/// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.

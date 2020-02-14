@@ -75,6 +75,10 @@ declare namespace Linqer {
          */
         static repeat(item: any, count: number): Enumerable;
         /**
+         * Same value as count(), but will throw an Error if enumerable is not seekable and has to be iterated to get the length
+         */
+        get length(): number;
+        /**
          * Concatenates two sequences by appending iterable to the existing one.
          *
          * @param {IterableType} iterable
@@ -182,6 +186,15 @@ declare namespace Linqer {
          * @memberof Enumerable
          */
         skip(nr: number): Enumerable;
+        /**
+         * Takes start elements, ignores howmany elements, continues with the new items and continues with the original enumerable
+         * Equivalent to the value of an array after performing splice on it with the same parameters
+         * @param start
+         * @param howmany
+         * @param items
+         * @returns splice
+         */
+        splice(start: number, howmany: number, ...newItems: any[]): Enumerable;
         /**
          * Computes the sum of a sequence of numeric values.
          *
@@ -441,6 +454,13 @@ declare namespace Linqer {
          * @memberof Enumerable
          */
         skipWhile(condition: IFilter): Enumerable;
+        /**
+         * Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
+         * @param start
+         * @param end
+         * @returns slice
+         */
+        slice(start: number | undefined, end: number | undefined): Enumerable;
         /**
          * Returns a new enumerable collection that contains the last nr elements from source.
          *

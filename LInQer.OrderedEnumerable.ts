@@ -127,19 +127,20 @@ namespace Linqer {
 
 		private getSortedArray() {
 			const self = this;
-			_ensureInternalTryGetAt(self);
 			let startIndex: number;
 			let endIndex: number;
 			let arr: any[] | null = null;
-			if (self._canSeek) {
-				({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, self.count()));
+			const innerEnumerable = self._src as Enumerable;
+			_ensureInternalTryGetAt(innerEnumerable);
+			if (innerEnumerable._canSeek) {
+				({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, innerEnumerable.count()));
 			} else {
 				arr = Array.from(self._src);
 				({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, arr.length));
 			}
 			if (startIndex < endIndex) {
 				if (!arr) {
-					const arr = Array.from(self._src);
+					arr = Array.from(self._src);
 				}
 				const sort: (item1: any, item2: any) => void = self._useQuickSort
 					? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)

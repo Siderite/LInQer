@@ -121,6 +121,15 @@ var Linqer;
             return result;
         }
         /**
+         * Same value as count(), but will throw an Error if enumerable is not seekable and has to be iterated to get the length
+         */
+        get length() {
+            _ensureInternalTryGetAt(this);
+            if (!this._canSeek)
+                throw new Error('Calling length on this enumerable will iterate it. Use count()');
+            return this.count();
+        }
+        /**
          * Concatenates two sequences by appending iterable to the existing one.
          *
          * @param {IterableType} iterable
@@ -400,6 +409,17 @@ var Linqer;
             return result;
         }
         /**
+         * Takes start elements, ignores howmany elements, continues with the new items and continues with the original enumerable
+         * Equivalent to the value of an array after performing splice on it with the same parameters
+         * @param start
+         * @param howmany
+         * @param items
+         * @returns splice
+         */
+        splice(start, howmany, ...newItems) {
+            return this.take(start).concat(newItems).concat(this.skip(start + howmany));
+        }
+        /**
          * Computes the sum of a sequence of numeric values.
          *
          * @returns {(number | undefined)}
@@ -539,6 +559,12 @@ var Linqer;
     function _ensureInternalCount(enumerable) {
         if (enumerable._count)
             return;
+        if (enumerable._src instanceof Enumerable) {
+            const innerEnumerable = enumerable._src;
+            _ensureInternalCount(innerEnumerable);
+            enumerable._count = () => innerEnumerable._count();
+            return;
+        }
         const src = enumerable._src;
         if (typeof src !== 'function' && typeof src.length === 'number') {
             enumerable._count = () => src.length;
@@ -560,6 +586,13 @@ var Linqer;
         if (enumerable._tryGetAt)
             return;
         enumerable._canSeek = true;
+        if (enumerable._src instanceof Enumerable) {
+            const innerEnumerable = enumerable._src;
+            _ensureInternalTryGetAt(innerEnumerable);
+            enumerable._tryGetAt = index => innerEnumerable._tryGetAt(index);
+            enumerable._canSeek = innerEnumerable._canSeek;
+            return;
+        }
         if (typeof enumerable._src === 'string') {
             enumerable._tryGetAt = index => {
                 if (index < enumerable._src.length) {
