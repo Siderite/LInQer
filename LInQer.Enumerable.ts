@@ -397,7 +397,7 @@ namespace Linqer {
 				}
 			}
 			: function* () {
-				const arr = _toArray(self);
+				const arr = self.toArray();
 				for (let index = arr.length - 1; index >= 0; index--) {
 					yield arr[index];
 				}

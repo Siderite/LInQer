@@ -1,3 +1,8 @@
+2020-02-16 - 1.2.0
+	- bugfix: lead had the wrong indexing function for elementAt
+	- bugfix: ordered enumerables mistakenly reported being able to seek (elementAt)
+	- performance improvements for toArray, reverse, shuffle, binarySearch
+	- performance improvements for orderBy and sort in place
 2020-02-14 - 1.1.5
 	- fixed a few bugs
 	- added slice

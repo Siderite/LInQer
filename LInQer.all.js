@@ -491,7 +491,27 @@ var Linqer;
          * @memberof Enumerable
          */
         toArray() {
-            return Array.from(this);
+            var _a;
+            _ensureInternalTryGetAt(this);
+            if (this._canSeek) {
+                const arr = new Array(this.count());
+                for (let i = 0; i < arr.length; i++) {
+                    arr[i] = (_a = this._tryGetAt(i)) === null || _a === void 0 ? void 0 : _a.value;
+                }
+                return arr;
+            }
+            const minIncrease = 64;
+            let size = 0;
+            const arr = [];
+            for (const item of this) {
+                if (size === arr.length) {
+                    arr.length += minIncrease;
+                }
+                arr[size] = item;
+                size++;
+            }
+            arr.length = size;
+            return arr;
         }
         /**
          * similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
@@ -503,7 +523,7 @@ var Linqer;
             _ensureInternalTryGetAt(this);
             if (this._canSeek)
                 return this;
-            return Enumerable.from(Array.from(this));
+            return Enumerable.from(this.toArray());
         }
         /**
          * Filters a sequence of values based on a predicate.
@@ -806,7 +826,7 @@ var Linqer;
                 }
             }
             : function* () {
-                const arr = Linqer._toArray(self);
+                const arr = self.toArray();
                 for (let index = arr.length - 1; index >= 0; index--) {
                     yield arr[index];
                 }
@@ -1095,7 +1115,7 @@ var Linqer;
 (function (Linqer) {
     /// Groups the elements of a sequence.
     Linqer.Enumerable.prototype.groupBy = function (keySelector) {
-        _ensureFunction(keySelector);
+        Linqer._ensureFunction(keySelector);
         const self = this;
         const gen = function* () {
             const groupMap = new Map();
@@ -1130,7 +1150,7 @@ var Linqer;
                     .toMap(g => g.key, g => g);
                 let index = 0;
                 for (const innerItem of self) {
-                    const arr = _toArray(lookup.get(innerKeySelector(innerItem, index)));
+                    const arr = Linqer._toArray(lookup.get(innerKeySelector(innerItem, index)));
                     yield resultSelector(innerItem, arr);
                     index++;
                 }
@@ -1204,17 +1224,6 @@ var Linqer;
         }
     }
     Linqer.GroupEnumerable = GroupEnumerable;
-    function _ensureFunction(f) {
-        if (!f || typeof f !== 'function')
-            throw new Error('the argument needs to be a function!');
-    }
-    function _toArray(enumerable) {
-        if (!enumerable)
-            return [];
-        if (Array.isArray(enumerable))
-            return enumerable;
-        return Array.from(enumerable);
-    }
 })(Linqer || (Linqer = {}));
 /// <reference path="./LInQer.Slim.ts" />
 var Linqer;
@@ -1298,6 +1307,8 @@ var Linqer;
                 const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, totalCount);
                 return endIndex - startIndex;
             };
+            this._canSeek = false;
+            this._tryGetAt = () => { throw new Error('Ordered enumerables cannot seek'); };
         }
         getSortedArray() {
             const self = this;
@@ -1563,18 +1574,29 @@ var Linqer;
             return items;
         const partitions = [];
         partitions.push({ left, right });
-        while (partitions.length) {
-            ({ left, right } = partitions.pop());
+        let size = 1;
+        while (size) {
+            const partition = { left, right } = partitions[size - 1];
             if (right - left < _insertionSortThreshold) {
                 _insertionsort(items, left, right, comparer);
+                size--;
                 continue;
             }
             const index = _partition(items, left, right, comparer);
-            if (left < index - 1 && index - 1 >= minIndex) {
-                partitions.push({ left, right: index - 1 });
+            if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+                partition.right = index - 1;
+                if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+                    partitions[size] = { left: index, right };
+                    size++;
+                }
             }
-            if (index < right && index < maxIndex) {
-                partitions.push({ left: index, right });
+            else {
+                if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+                    partition.left = index;
+                }
+                else {
+                    size--;
+                }
             }
         }
         return items;
@@ -1592,7 +1614,7 @@ var Linqer;
     Linqer.Enumerable.prototype.shuffle = function () {
         const self = this;
         function* gen() {
-            const arr = Array.from(self);
+            const arr = self.toArray();
             const len = arr.length;
             let n = 0;
             while (n < len) {
@@ -1692,11 +1714,7 @@ var Linqer;
     /// returns the index of a value in an ordered enumerable or false if not found
     /// WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
     Linqer.Enumerable.prototype.binarySearch = function (value, comparer = Linqer._defaultComparer) {
-        let enumerable = this;
-        Linqer._ensureInternalTryGetAt(this);
-        if (!this._canSeek) {
-            enumerable = Linqer.Enumerable.from(Array.from(this));
-        }
+        let enumerable = this.toList();
         let start = 0;
         let end = enumerable.count() - 1;
         while (start <= end) {
@@ -1808,7 +1826,7 @@ var Linqer;
             result._canSeek = true;
             result._tryGetAt = (index) => {
                 const val1 = self._tryGetAt(index);
-                const val2 = self._tryGetAt(index - offset);
+                const val2 = self._tryGetAt(index + offset);
                 if (val1) {
                     return {
                         value: zipper(val1.value, val2 ? val2.value : undefined)

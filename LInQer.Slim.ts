@@ -533,7 +533,26 @@ namespace Linqer {
 		 * @memberof Enumerable
 		 */
 		toArray(): any[] {
-			return Array.from(this);
+			_ensureInternalTryGetAt(this);
+			if (this._canSeek) {
+				const arr = new Array(this.count());
+				for (let i = 0; i < arr.length; i++) {
+					arr[i] = this._tryGetAt!(i)?.value;
+				}
+				return arr;
+			}
+			const minIncrease = 64;
+			let size = 0;
+			const arr = [];
+			for (const item of this) {
+				if (size === arr.length) {
+					arr.length += minIncrease;
+				}
+				arr[size] = item;
+				size++;
+			}
+			arr.length = size;
+			return arr;
 		}
 
 		
@@ -546,7 +565,7 @@ namespace Linqer {
 		toList(): Enumerable {
 			_ensureInternalTryGetAt(this);
 			if (this._canSeek) return this;
-			return Enumerable.from(Array.from(this));
+			return Enumerable.from(this.toArray());
 		}
 		
 		/**
