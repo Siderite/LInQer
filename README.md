@@ -46,6 +46,7 @@ Find it hosted on GitHub Pages and use it freely in your projects at:
 # Reference
 Reference **Linqer.slim.js** for the basic methods:
 - from, empty, range, repeat - static on Linqer.Enumerable
+- length property - same as count, but throws error if the enumerable needs to be enumerated to get the length (no side effects)
 - concat
 - count
 - distinct
@@ -55,6 +56,7 @@ Reference **Linqer.slim.js** for the basic methods:
 - min, max, stats (min, max and count)
 - select
 - skip and take
+- splice function - kind of useless, but it was an experiment to see if I can make Enumerable appear as an Array-like object
 - sum and sumAndCount (sum and count)
 - toArray
 - toList - similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do *count* and *elementAt* without iterating
@@ -88,6 +90,7 @@ Reference **Linqer.js** for all of the original Enumerable methods, the ones in 
 - skip - on an ordered enumerable
 - skipLast - on a regular or ordered enumerable
 - skipWhile
+- slice
 - take - on an ordered enumerable
 - takeLast - on a regular or ordered enumerable
 - takeWhile

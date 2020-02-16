@@ -99,7 +99,7 @@ namespace Linqer {
     Enumerable.prototype.shuffle = function (): Enumerable {
         const self = this;
         function* gen() {
-            const arr = Array.from(self);
+            const arr = self.toArray();
             const len = arr.length;
             let n = 0;
             while (n < len) {
@@ -201,11 +201,7 @@ namespace Linqer {
     /// returns the index of a value in an ordered enumerable or false if not found
     /// WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
     Enumerable.prototype.binarySearch = function (value: any, comparer: IComparer = _defaultComparer): number | boolean {
-        let enumerable: Enumerable = this;
-        _ensureInternalTryGetAt(this);
-        if (!this._canSeek) {
-            enumerable = Enumerable.from(Array.from(this));
-        }
+        let enumerable: Enumerable = this.toList();
         let start = 0;
         let end = enumerable.count() - 1;
 
@@ -319,7 +315,7 @@ namespace Linqer {
             result._canSeek = true;
             result._tryGetAt = (index: number) => {
                 const val1 = self._tryGetAt!(index);
-                const val2 = self._tryGetAt!(index - offset);
+                const val2 = self._tryGetAt!(index + offset);
                 if (val1) {
                     return {
                         value: zipper(

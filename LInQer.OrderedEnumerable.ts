@@ -123,6 +123,8 @@ namespace Linqer {
 				const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, totalCount);
 				return endIndex - startIndex;
 			};
+			this._canSeek=false;
+			this._tryGetAt = ()=>{ throw new Error('Ordered enumerables cannot seek'); };
 		}
 
 		private getSortedArray() {
@@ -401,18 +403,27 @@ namespace Linqer {
 
 		const partitions: { left: number, right: number }[] = [];
 		partitions.push({ left, right });
-		while (partitions.length) {
-			({ left, right } = partitions.pop()!);
+		let size = 1;
+		while (size) {
+			const partition = { left, right } = partitions[size-1];
 			if (right - left < _insertionSortThreshold) {
 				_insertionsort(items, left, right, comparer);
+				size--;
 				continue;
 			}
 			const index = _partition(items, left, right, comparer);
-			if (left < index - 1 && index - 1 >= minIndex) {
-				partitions.push({ left, right: index - 1 });
-			}
-			if (index < right && index < maxIndex) {
-				partitions.push({ left: index, right });
+			if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+				partition.right = index - 1;
+				if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+					partitions[size]={ left: index, right };
+					size++;
+				}
+			} else {
+				if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+					partition.left = index;
+				} else {
+					size--;
+				}
 			}
 		}
 		return items;

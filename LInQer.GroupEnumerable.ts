@@ -173,13 +173,4 @@ namespace Linqer {
 			this.key = key;
 		}
 	}
-
-	function _ensureFunction(f: Function): void {
-		if (!f || typeof f !== 'function') throw new Error('the argument needs to be a function!');
-	}
-	function _toArray(enumerable: IterableType) {
-		if (!enumerable) return [];
-		if (Array.isArray(enumerable)) return enumerable;
-		return Array.from(enumerable);
-	}
 }
