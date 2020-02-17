@@ -245,7 +245,7 @@ declare namespace Linqer {
     }
     export function _ensureIterable(src: IterableType): void;
     export function _ensureFunction(f: Function): void;
-    export function _toArray(enumerable: IterableType): any[];
+    export function _toArray(iterable: IterableType): any[];
     export function _ensureInternalCount(enumerable: Enumerable): void;
     export function _ensureInternalTryGetAt(enumerable: Enumerable): void;
     /**

@@ -1,3 +1,6 @@
+2020-02-16 - 1.2.1
+	- added comments to the code to better explain the mechanism
+	- bugfix: canSeek was not set for reverse
 2020-02-16 - 1.2.0
 	- bugfix: lead had the wrong indexing function for elementAt
 	- bugfix: ordered enumerables mistakenly reported being able to seek (elementAt)

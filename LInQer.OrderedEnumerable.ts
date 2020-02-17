@@ -109,6 +109,8 @@ namespace Linqer {
 				this._keySelectors.push({ keySelector: keySelector, ascending: ascending });
 			}
 			const self: OrderedEnumerable = this;
+			// generator gets an array of the original, 
+			// sorted inside the interval determined by functions such as skip, take, skipLast, takeLast
 			this._generator = function* () {
 				let { startIndex, endIndex, arr } = this.getSortedArray();
 				if (arr) {
@@ -118,11 +120,14 @@ namespace Linqer {
 				}
 			};
 
+			// the count is the difference between the end and start indexes
+			// if no skip/take functions were used, this will be the original count
 			this._count = () => {
 				const totalCount = Enumerable.from(self._src).count();
 				const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, totalCount);
 				return endIndex - startIndex;
 			};
+			// an ordered enumerable cannot seek
 			this._canSeek=false;
 			this._tryGetAt = ()=>{ throw new Error('Ordered enumerables cannot seek'); };
 		}
@@ -134,6 +139,7 @@ namespace Linqer {
 			let arr: any[] | null = null;
 			const innerEnumerable = self._src as Enumerable;
 			_ensureInternalTryGetAt(innerEnumerable);
+			// try to avoid enumerating the entire original into an array
 			if (innerEnumerable._canSeek) {
 				({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, innerEnumerable.count()));
 			} else {
@@ -144,6 +150,7 @@ namespace Linqer {
 				if (!arr) {
 					arr = Array.from(self._src);
 				}
+				// only quicksort supports partial ordering inside an interval
 				const sort: (item1: any, item2: any) => void = self._useQuickSort
 					? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
 					: (a, c) => a.sort(c);
@@ -164,6 +171,7 @@ namespace Linqer {
 		}
 
 		private generateSortFunc(selectors: { keySelector: ISelector, ascending: boolean }[]): (i1: any, i2: any) => number {
+			// simplify the selectors into an array of comparers
 			const comparers = selectors.map(s => {
 				const f = s.keySelector;
 				const comparer = (i1: any, i2: any) => {
@@ -177,6 +185,8 @@ namespace Linqer {
 					? comparer
 					: (i1: any, i2: any) => -comparer(i1, i2);
 			});
+			// optimize the resulting sort function in the most common case
+			// (ordered by a single criterion)
 			return comparers.length == 1
 				? comparers[0]
 				: (i1: any, i2: any) => {
@@ -188,6 +198,7 @@ namespace Linqer {
 				};
 		}
 
+		/// calculate the interval in which an array needs to have ordered items for this ordered enumerable
 		private getStartAndEndIndexes(restrictions: { type: RestrictionType, nr: number }[], arrLength: number) {
 			let startIndex = 0;
 			let endIndex = arrLength;
@@ -354,13 +365,11 @@ namespace Linqer {
 
 	}
 
-	function _ensureFunction(f: Function): void {
-		if (!f || typeof f !== 'function') throw new Error('the argument needs to be a function!');
-	}
+
+	const _insertionSortThreshold = 64;
+	/// insertion sort is used for small intervals
 	function _insertionsort(arr: any[], leftIndex: number, rightIndex: number, comparer: IComparer) {
 		for (let j = leftIndex; j <= rightIndex; j++) {
-			// Invariant: arr[:j] contains the same elements as
-			// the original slice arr[:j], but in sorted order.
 			const key = arr[j];
 			let i = j - 1;
 			while (i >= leftIndex && comparer(arr[i], key) > 0) {
@@ -371,11 +380,13 @@ namespace Linqer {
 		}
 	}
 
+	/// swap two items in an array by index
 	function _swapArrayItems(array: any[], leftIndex: number, rightIndex: number): void {
 		const temp = array[leftIndex];
 		array[leftIndex] = array[rightIndex];
 		array[rightIndex] = temp;
 	}
+	// Quicksort partition by center value coming from both sides
 	function _partition(items: any[], left: number, right: number, comparer: IComparer) {
 		const pivot = items[(right + left) >> 1];
 		while (left <= right) {
@@ -396,14 +407,17 @@ namespace Linqer {
 		return left;
 	}
 
-	const _insertionSortThreshold = 64;
-
+	/// optimized Quicksort algorithm
 	function _quickSort(items: any[], left: number, right: number, comparer: IComparer = _defaultComparer, minIndex: number = 0, maxIndex: number = Number.MAX_SAFE_INTEGER) {
 		if (!items.length) return items;
 
+		// store partition indexes to be processed in here
 		const partitions: { left: number, right: number }[] = [];
 		partitions.push({ left, right });
 		let size = 1;
+		// the actual size of the partitions array never decreases
+		// but we keep score of the number of partitions in 'size'
+		// and we reuse slots whenever possible
 		while (size) {
 			const partition = { left, right } = partitions[size-1];
 			if (right - left < _insertionSortThreshold) {
@@ -412,14 +426,14 @@ namespace Linqer {
 				continue;
 			}
 			const index = _partition(items, left, right, comparer);
-			if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+			if (left < index - 1 && index - 1 >= minIndex) {
 				partition.right = index - 1;
-				if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+				if (index < right && index < maxIndex) { 
 					partitions[size]={ left: index, right };
 					size++;
 				}
 			} else {
-				if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+				if (index < right && index < maxIndex) { 
 					partition.left = index;
 				} else {
 					size--;
@@ -428,5 +442,4 @@ namespace Linqer {
 		}
 		return items;
 	}
-
 }

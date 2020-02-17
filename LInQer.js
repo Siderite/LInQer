@@ -19,12 +19,16 @@ var Linqer;
             _ensureIterable(src);
             this._src = src;
             const iteratorFunction = src[Symbol.iterator];
+            // the generator is either the iterator of the source enumerable
+            // or the generator function that was provided as the source itself
             if (iteratorFunction) {
                 this._generator = iteratorFunction.bind(src);
             }
             else {
                 this._generator = src;
             }
+            // set sorting method on an enumerable and all the derived ones should inherit it
+            // TODO: a better method of doing this
             this._useQuickSort = src._useQuickSort !== undefined
                 ? src._useQuickSort
                 : true;
@@ -139,6 +143,9 @@ var Linqer;
         concat(iterable) {
             _ensureIterable(iterable);
             const self = this;
+            // the generator will iterate the enumerable first, then the iterable that was given as a parameter
+            // this will be able to seek if both the original and the iterable derived enumerable can seek
+            // the indexing function will get items from the first and then second enumerable without iteration
             const gen = function* () {
                 for (const item of self) {
                     yield item;
@@ -180,6 +187,7 @@ var Linqer;
          */
         distinct(equalityComparer = Linqer.EqualityComparer.default) {
             const self = this;
+            // if the comparer function is not provided, a Set will be used to quickly determine distinctiveness
             const gen = equalityComparer === Linqer.EqualityComparer.default
                 ? function* () {
                     const distinctValues = new Set();
@@ -191,6 +199,8 @@ var Linqer;
                         }
                     }
                 }
+                // otherwise values will be compared with previous values ( O(n^2) )
+                // use distinctByHash in Linqer.extra to use a hashing function ( O(n log n) )
                 : function* () {
                     const values = [];
                     for (const item of self) {
@@ -262,6 +272,7 @@ var Linqer;
          */
         last() {
             _ensureInternalTryGetAt(this);
+            // if this cannot seek, getting the last element requires iterating the whole thing
             if (!this._canSeek) {
                 let result = null;
                 let found = false;
@@ -273,6 +284,7 @@ var Linqer;
                     return result;
                 throw new Error('The enumeration is empty');
             }
+            // if this can seek, then just go directly at the last element
             const count = this.count();
             return this.elementAt(count - 1);
         }
@@ -361,6 +373,9 @@ var Linqer;
         select(selector) {
             _ensureFunction(selector);
             const self = this;
+            // the generator is applying the selector on all the items of the enumerable
+            // the count of the resulting enumerable is the same as the original's
+            // the indexer is the same as that of the original, with the selector applied on the value
             const gen = function* () {
                 let index = 0;
                 for (const item of self) {
@@ -390,6 +405,9 @@ var Linqer;
          */
         skip(nr) {
             const self = this;
+            // the generator just enumerates the first nr numbers then starts yielding values
+            // the count is the same as the original enumerable, minus the skipped items and at least 0
+            // the indexer is the same as for the original, with an offset
             const gen = function* () {
                 let nrLeft = nr;
                 for (const item of self) {
@@ -417,6 +435,8 @@ var Linqer;
          * @returns splice
          */
         splice(start, howmany, ...newItems) {
+            // tried to define length and splice so that this is seen as an Array-like object, 
+            // but it doesn't work on properties. length needs to be a field.
             return this.take(start).concat(newItems).concat(this.skip(start + howmany));
         }
         /**
@@ -459,6 +479,9 @@ var Linqer;
          */
         take(nr) {
             const self = this;
+            // the generator will stop after nr items yielded
+            // the count is the maximum between the total count and nr
+            // the indexer is the same, as long as it's not higher than nr
             const gen = function* () {
                 let nrLeft = nr;
                 for (const item of self) {
@@ -493,6 +516,7 @@ var Linqer;
         toArray() {
             var _a;
             _ensureInternalTryGetAt(this);
+            // this should be faster than Array.from(this)
             if (this._canSeek) {
                 const arr = new Array(this.count());
                 for (let i = 0; i < arr.length; i++) {
@@ -500,6 +524,8 @@ var Linqer;
                 }
                 return arr;
             }
+            // try to optimize the array growth by increasing it 
+            // by 64 every time it is needed 
             const minIncrease = 64;
             let size = 0;
             const arr = [];
@@ -535,6 +561,8 @@ var Linqer;
         where(condition) {
             _ensureFunction(condition);
             const self = this;
+            // cannot imply the count or indexer from the condition
+            // where will have to iterate through the whole thing
             const gen = function* () {
                 let index = 0;
                 for (const item of self) {
@@ -548,6 +576,7 @@ var Linqer;
         }
     }
     Linqer.Enumerable = Enumerable;
+    // throw if src is not a generator function or an iteratable
     function _ensureIterable(src) {
         if (src) {
             if (src[Symbol.iterator])
@@ -558,34 +587,41 @@ var Linqer;
         throw new Error('the argument must be iterable!');
     }
     Linqer._ensureIterable = _ensureIterable;
+    // throw if f is not a function
     function _ensureFunction(f) {
         if (!f || typeof f !== 'function')
             throw new Error('the argument needs to be a function!');
     }
     Linqer._ensureFunction = _ensureFunction;
+    // return Nan if this is not a number
+    // different from Number(obj), which would cast strings to numbers
     function _toNumber(obj) {
         return typeof obj === 'number'
             ? obj
             : Number.NaN;
     }
-    function _toArray(enumerable) {
-        if (!enumerable)
+    // return the iterable if already an array or use Array.from to create one
+    function _toArray(iterable) {
+        if (!iterable)
             return [];
-        if (Array.isArray(enumerable))
-            return enumerable;
-        return Array.from(enumerable);
+        if (Array.isArray(iterable))
+            return iterable;
+        return Array.from(iterable);
     }
     Linqer._toArray = _toArray;
+    // if the internal count function is not defined, set it to the most appropriate one
     function _ensureInternalCount(enumerable) {
         if (enumerable._count)
             return;
         if (enumerable._src instanceof Enumerable) {
+            // the count is the same as the underlying enumerable
             const innerEnumerable = enumerable._src;
             _ensureInternalCount(innerEnumerable);
             enumerable._count = () => innerEnumerable._count();
             return;
         }
         const src = enumerable._src;
+        // this could cause false positives, but if it has a numeric length or size, use it
         if (typeof src !== 'function' && typeof src.length === 'number') {
             enumerable._count = () => src.length;
             return;
@@ -594,6 +630,7 @@ var Linqer;
             enumerable._count = () => src.size;
             return;
         }
+        // otherwise iterate the whole thing and count all items
         enumerable._count = () => {
             let x = 0;
             for (const item of enumerable)
@@ -602,11 +639,14 @@ var Linqer;
         };
     }
     Linqer._ensureInternalCount = _ensureInternalCount;
+    // ensure there is an internal indexer function adequate for this enumerable
+    // this also determines if the enumerable can seek
     function _ensureInternalTryGetAt(enumerable) {
         if (enumerable._tryGetAt)
             return;
         enumerable._canSeek = true;
         if (enumerable._src instanceof Enumerable) {
+            // indexer and seekability is the same as for the underlying enumerable
             const innerEnumerable = enumerable._src;
             _ensureInternalTryGetAt(innerEnumerable);
             enumerable._tryGetAt = index => innerEnumerable._tryGetAt(index);
@@ -614,6 +654,7 @@ var Linqer;
             return;
         }
         if (typeof enumerable._src === 'string') {
+            // a string can be accessed by index
             enumerable._tryGetAt = index => {
                 if (index < enumerable._src.length) {
                     return { value: enumerable._src.charAt(index) };
@@ -623,6 +664,7 @@ var Linqer;
             return;
         }
         if (Array.isArray(enumerable._src)) {
+            // an array can be accessed by index
             enumerable._tryGetAt = index => {
                 if (index >= 0 && index < enumerable._src.length) {
                     return { value: enumerable._src[index] };
@@ -633,6 +675,8 @@ var Linqer;
         }
         const src = enumerable._src;
         if (typeof enumerable._src !== 'function' && typeof src.length === 'number') {
+            // try to access an object with a defined numeric length by indexing it
+            // might cause false positives
             enumerable._tryGetAt = index => {
                 if (index < src.length && typeof src[index] !== 'undefined') {
                     return { value: src[index] };
@@ -746,6 +790,7 @@ var Linqer;
     Linqer.Enumerable.prototype.except = function (iterable, equalityComparer = Linqer.EqualityComparer.default) {
         Linqer._ensureIterable(iterable);
         const self = this;
+        // use a Set for performance if the comparer is not set
         const gen = equalityComparer === Linqer.EqualityComparer.default
             ? function* () {
                 const distinctValues = Linqer.Enumerable.from(iterable).toSet();
@@ -754,6 +799,7 @@ var Linqer;
                         yield item;
                 }
             }
+            // use exceptByHash from Linqer.extra for better performance
             : function* () {
                 const values = Linqer._toArray(iterable);
                 for (const item of self) {
@@ -774,6 +820,7 @@ var Linqer;
     Linqer.Enumerable.prototype.intersect = function (iterable, equalityComparer = Linqer.EqualityComparer.default) {
         Linqer._ensureIterable(iterable);
         const self = this;
+        // use a Set for performance if the comparer is not set
         const gen = equalityComparer === Linqer.EqualityComparer.default
             ? function* () {
                 const distinctValues = new Set(Linqer.Enumerable.from(iterable));
@@ -782,6 +829,7 @@ var Linqer;
                         yield item;
                 }
             }
+            // use intersectByHash from Linqer.extra for better performance
             : function* () {
                 const values = Linqer._toArray(iterable);
                 for (const item of self) {
@@ -818,6 +866,7 @@ var Linqer;
     Linqer.Enumerable.prototype.reverse = function () {
         Linqer._ensureInternalTryGetAt(this);
         const self = this;
+        // if it can seek, just read the enumerable backwards
         const gen = this._canSeek
             ? function* () {
                 const length = self.count();
@@ -825,18 +874,22 @@ var Linqer;
                     yield self.elementAt(index);
                 }
             }
+            // else enumerate it all into an array, then read it backwards
             : function* () {
                 const arr = self.toArray();
                 for (let index = arr.length - 1; index >= 0; index--) {
                     yield arr[index];
                 }
             };
+        // the count is the same when reversed
         const result = new Linqer.Enumerable(gen);
         Linqer._ensureInternalCount(this);
         result._count = this._count;
         Linqer._ensureInternalTryGetAt(this);
+        // have a custom indexer only if the original enumerable could seek
         if (this._canSeek) {
             const self = this;
+            result._canSeek = true;
             result._tryGetAt = index => self._tryGetAt(self.count() - index - 1);
         }
         return result;
@@ -906,11 +959,10 @@ var Linqer;
     /// Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
     Linqer.Enumerable.prototype.slice = function (start = 0, end) {
         let enumerable = this;
+        // when the end is defined and positive and start is negative,
+        // the only way to compute the last index is to know the count
         if (end !== undefined && end >= 0 && (start || 0) < 0) {
-            Linqer._ensureInternalTryGetAt(enumerable);
-            if (!enumerable._canSeek) {
-                enumerable = Linqer.Enumerable.from(enumerable.toArray());
-            }
+            enumerable = enumerable.toList();
             start = enumerable.count() + start;
         }
         if (start !== 0) {
@@ -934,6 +986,8 @@ var Linqer;
     /// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
     Linqer.Enumerable.prototype.skipLast = function (nr) {
         const self = this;
+        // the generator is using a buffer to cache nr values 
+        // and only yields the values that overflow from it
         const gen = function* () {
             let nrLeft = nr;
             const buffer = Array(nrLeft);
@@ -953,9 +1007,11 @@ var Linqer;
             buffer.length = 0;
         };
         const result = new Linqer.Enumerable(gen);
+        // the count is the original count minus the skipped items and at least 0  
         result._count = () => Math.max(0, self.count() - nr);
         Linqer._ensureInternalTryGetAt(this);
         result._canSeek = this._canSeek;
+        // it has an indexer only if the original enumerable can seek
         if (this._canSeek) {
             result._tryGetAt = index => {
                 if (index >= result.count())
@@ -989,6 +1045,7 @@ var Linqer;
         Linqer._ensureInternalTryGetAt(this);
         const self = this;
         const gen = this._canSeek
+            // taking the last items is easy if the enumerable can seek
             ? function* () {
                 let nrLeft = nr;
                 const length = self.count();
@@ -996,6 +1053,8 @@ var Linqer;
                     yield self.elementAt(index);
                 }
             }
+            // else the generator uses a buffer to fill with values
+            // and yields them after the entire thing has been iterated
             : function* () {
                 let nrLeft = nr;
                 let index = 0;
@@ -1009,8 +1068,10 @@ var Linqer;
                 }
             };
         const result = new Linqer.Enumerable(gen);
+        // the count is the minimum between nr and the enumerable count
         result._count = () => Math.min(nr, self.count());
         result._canSeek = self._canSeek;
+        // this can seek only if the original enumerable could seek
         if (self._canSeek) {
             result._tryGetAt = index => {
                 if (index < 0 || index >= result.count())
@@ -1120,6 +1181,7 @@ var Linqer;
         const gen = function* () {
             const groupMap = new Map();
             let index = 0;
+            // iterate all items and group them in a Map
             for (const item of self) {
                 const key = keySelector(item, index);
                 const group = groupMap.get(key);
@@ -1131,6 +1193,7 @@ var Linqer;
                 }
                 index++;
             }
+            // then yield a GroupEnumerable for each group
             for (const [key, items] of groupMap) {
                 const group = new GroupEnumerable(items, key);
                 yield group;
@@ -1232,7 +1295,7 @@ var Linqer;
     /// Sorts the elements of a sequence in ascending order.
     Linqer.Enumerable.prototype.orderBy = function (keySelector) {
         if (keySelector) {
-            _ensureFunction(keySelector);
+            Linqer._ensureFunction(keySelector);
         }
         else {
             keySelector = item => item;
@@ -1242,7 +1305,7 @@ var Linqer;
     /// Sorts the elements of a sequence in descending order.
     Linqer.Enumerable.prototype.orderByDescending = function (keySelector) {
         if (keySelector) {
-            _ensureFunction(keySelector);
+            Linqer._ensureFunction(keySelector);
         }
         else {
             keySelector = item => item;
@@ -1294,6 +1357,8 @@ var Linqer;
                 this._keySelectors.push({ keySelector: keySelector, ascending: ascending });
             }
             const self = this;
+            // generator gets an array of the original, 
+            // sorted inside the interval determined by functions such as skip, take, skipLast, takeLast
             this._generator = function* () {
                 let { startIndex, endIndex, arr } = this.getSortedArray();
                 if (arr) {
@@ -1302,11 +1367,14 @@ var Linqer;
                     }
                 }
             };
+            // the count is the difference between the end and start indexes
+            // if no skip/take functions were used, this will be the original count
             this._count = () => {
                 const totalCount = Linqer.Enumerable.from(self._src).count();
                 const { startIndex, endIndex } = this.getStartAndEndIndexes(self._restrictions, totalCount);
                 return endIndex - startIndex;
             };
+            // an ordered enumerable cannot seek
             this._canSeek = false;
             this._tryGetAt = () => { throw new Error('Ordered enumerables cannot seek'); };
         }
@@ -1317,6 +1385,7 @@ var Linqer;
             let arr = null;
             const innerEnumerable = self._src;
             Linqer._ensureInternalTryGetAt(innerEnumerable);
+            // try to avoid enumerating the entire original into an array
             if (innerEnumerable._canSeek) {
                 ({ startIndex, endIndex } = self.getStartAndEndIndexes(self._restrictions, innerEnumerable.count()));
             }
@@ -1328,6 +1397,7 @@ var Linqer;
                 if (!arr) {
                     arr = Array.from(self._src);
                 }
+                // only quicksort supports partial ordering inside an interval
                 const sort = self._useQuickSort
                     ? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
                     : (a, c) => a.sort(c);
@@ -1348,6 +1418,7 @@ var Linqer;
             }
         }
         generateSortFunc(selectors) {
+            // simplify the selectors into an array of comparers
             const comparers = selectors.map(s => {
                 const f = s.keySelector;
                 const comparer = (i1, i2) => {
@@ -1363,6 +1434,8 @@ var Linqer;
                     ? comparer
                     : (i1, i2) => -comparer(i1, i2);
             });
+            // optimize the resulting sort function in the most common case
+            // (ordered by a single criterion)
             return comparers.length == 1
                 ? comparers[0]
                 : (i1, i2) => {
@@ -1374,6 +1447,7 @@ var Linqer;
                     return 0;
                 };
         }
+        /// calculate the interval in which an array needs to have ordered items for this ordered enumerable
         getStartAndEndIndexes(restrictions, arrLength) {
             let startIndex = 0;
             let endIndex = arrLength;
@@ -1482,8 +1556,8 @@ var Linqer;
          * @memberof OrderedEnumerable
          */
         toMap(keySelector, valueSelector = x => x) {
-            _ensureFunction(keySelector);
-            _ensureFunction(valueSelector);
+            Linqer._ensureFunction(keySelector);
+            Linqer._ensureFunction(valueSelector);
             const result = new Map();
             const arr = this.toArray();
             for (let i = 0; i < arr.length; i++) {
@@ -1500,8 +1574,8 @@ var Linqer;
          * @memberof OrderedEnumerable
          */
         toObject(keySelector, valueSelector = x => x) {
-            _ensureFunction(keySelector);
-            _ensureFunction(valueSelector);
+            Linqer._ensureFunction(keySelector);
+            Linqer._ensureFunction(valueSelector);
             const result = {};
             const arr = this.toArray();
             for (let i = 0; i < arr.length; i++) {
@@ -1525,14 +1599,10 @@ var Linqer;
         }
     }
     Linqer.OrderedEnumerable = OrderedEnumerable;
-    function _ensureFunction(f) {
-        if (!f || typeof f !== 'function')
-            throw new Error('the argument needs to be a function!');
-    }
+    const _insertionSortThreshold = 64;
+    /// insertion sort is used for small intervals
     function _insertionsort(arr, leftIndex, rightIndex, comparer) {
         for (let j = leftIndex; j <= rightIndex; j++) {
-            // Invariant: arr[:j] contains the same elements as
-            // the original slice arr[:j], but in sorted order.
             const key = arr[j];
             let i = j - 1;
             while (i >= leftIndex && comparer(arr[i], key) > 0) {
@@ -1542,11 +1612,13 @@ var Linqer;
             arr[i + 1] = key;
         }
     }
+    /// swap two items in an array by index
     function _swapArrayItems(array, leftIndex, rightIndex) {
         const temp = array[leftIndex];
         array[leftIndex] = array[rightIndex];
         array[rightIndex] = temp;
     }
+    // Quicksort partition by center value coming from both sides
     function _partition(items, left, right, comparer) {
         const pivot = items[(right + left) >> 1];
         while (left <= right) {
@@ -1568,13 +1640,17 @@ var Linqer;
         }
         return left;
     }
-    const _insertionSortThreshold = 64;
+    /// optimized Quicksort algorithm
     function _quickSort(items, left, right, comparer = Linqer._defaultComparer, minIndex = 0, maxIndex = Number.MAX_SAFE_INTEGER) {
         if (!items.length)
             return items;
+        // store partition indexes to be processed in here
         const partitions = [];
         partitions.push({ left, right });
         let size = 1;
+        // the actual size of the partitions array never decreases
+        // but we keep score of the number of partitions in 'size'
+        // and we reuse slots whenever possible
         while (size) {
             const partition = { left, right } = partitions[size - 1];
             if (right - left < _insertionSortThreshold) {
@@ -1583,15 +1659,15 @@ var Linqer;
                 continue;
             }
             const index = _partition(items, left, right, comparer);
-            if (left < index - 1 && index - 1 >= minIndex) { //more elements on the left side of the pivot
+            if (left < index - 1 && index - 1 >= minIndex) {
                 partition.right = index - 1;
-                if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+                if (index < right && index < maxIndex) {
                     partitions[size] = { left: index, right };
                     size++;
                 }
             }
             else {
-                if (index < right && index < maxIndex) { //more elements on the right side of the pivot
+                if (index < right && index < maxIndex) {
                     partition.left = index;
                 }
                 else {

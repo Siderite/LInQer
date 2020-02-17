@@ -315,6 +315,7 @@ namespace Linqer {
 	Enumerable.prototype.except = function (iterable: IterableType, equalityComparer: IEqualityComparer = EqualityComparer.default): Enumerable {
 		_ensureIterable(iterable);
 		const self: Enumerable = this;
+		// use a Set for performance if the comparer is not set
 		const gen = equalityComparer === EqualityComparer.default
 			? function* () {
 				const distinctValues = Enumerable.from(iterable).toSet();
@@ -322,6 +323,7 @@ namespace Linqer {
 					if (!distinctValues.has(item)) yield item;
 				}
 			}
+			// use exceptByHash from Linqer.extra for better performance
 			: function* () {
 				const values = _toArray(iterable);
 				for (const item of self) {
@@ -342,6 +344,7 @@ namespace Linqer {
 	Enumerable.prototype.intersect = function (iterable: IterableType, equalityComparer: IEqualityComparer = EqualityComparer.default): Enumerable {
 		_ensureIterable(iterable);
 		const self: Enumerable = this;
+		// use a Set for performance if the comparer is not set
 		const gen = equalityComparer === EqualityComparer.default
 			? function* () {
 				const distinctValues = new Set(Enumerable.from(iterable));
@@ -349,6 +352,7 @@ namespace Linqer {
 					if (distinctValues.has(item)) yield item;
 				}
 			}
+			// use intersectByHash from Linqer.extra for better performance
 			: function* () {
 				const values = _toArray(iterable);
 				for (const item of self) {
@@ -389,6 +393,7 @@ namespace Linqer {
 	Enumerable.prototype.reverse = function (): Enumerable {
 		_ensureInternalTryGetAt(this);
 		const self: Enumerable = this;
+		// if it can seek, just read the enumerable backwards
 		const gen = this._canSeek
 			? function* () {
 				const length = self.count();
@@ -396,18 +401,22 @@ namespace Linqer {
 					yield self.elementAt(index);
 				}
 			}
+			// else enumerate it all into an array, then read it backwards
 			: function* () {
 				const arr = self.toArray();
 				for (let index = arr.length - 1; index >= 0; index--) {
 					yield arr[index];
 				}
 			};
+		// the count is the same when reversed
 		const result = new Enumerable(gen);
 		_ensureInternalCount(this);
 		result._count = this._count;
 		_ensureInternalTryGetAt(this);
+		// have a custom indexer only if the original enumerable could seek
 		if (this._canSeek) {
 			const self = this;
+			result._canSeek = true;
 			result._tryGetAt = index => self._tryGetAt!(self.count() - index - 1);
 		}
 		return result;
@@ -476,11 +485,10 @@ namespace Linqer {
 	/// Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
 	Enumerable.prototype.slice = function (start: number = 0, end: number | undefined): Enumerable {
 		let enumerable: Enumerable = this;
+		// when the end is defined and positive and start is negative,
+		// the only way to compute the last index is to know the count
 		if (end !== undefined && end >= 0 && (start || 0) < 0) {
-			_ensureInternalTryGetAt(enumerable);
-			if (!enumerable._canSeek) {
-				enumerable = Enumerable.from(enumerable.toArray());
-			}
+			enumerable = enumerable.toList();
 			start = enumerable.count() + start;
 		}
 		if (start !== 0) {
@@ -503,6 +511,8 @@ namespace Linqer {
 	/// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
 	Enumerable.prototype.skipLast = function (nr: number): Enumerable {
 		const self: Enumerable = this;
+		// the generator is using a buffer to cache nr values 
+		// and only yields the values that overflow from it
 		const gen = function* () {
 			let nrLeft = nr;
 			const buffer = Array(nrLeft);
@@ -523,9 +533,11 @@ namespace Linqer {
 		};
 		const result = new Enumerable(gen);
 
+		// the count is the original count minus the skipped items and at least 0  
 		result._count = () => Math.max(0, self.count() - nr);
 		_ensureInternalTryGetAt(this);
 		result._canSeek = this._canSeek;
+		// it has an indexer only if the original enumerable can seek
 		if (this._canSeek) {
 			result._tryGetAt = index => {
 				if (index >= result.count()) return null;
@@ -561,6 +573,7 @@ namespace Linqer {
 		_ensureInternalTryGetAt(this);
 		const self: Enumerable = this;
 		const gen = this._canSeek
+			// taking the last items is easy if the enumerable can seek
 			? function* () {
 				let nrLeft = nr;
 				const length = self.count();
@@ -568,6 +581,8 @@ namespace Linqer {
 					yield self.elementAt(index);
 				}
 			}
+			// else the generator uses a buffer to fill with values
+			// and yields them after the entire thing has been iterated
 			: function* () {
 				let nrLeft = nr;
 				let index = 0;
@@ -582,8 +597,10 @@ namespace Linqer {
 			};
 		const result = new Enumerable(gen);
 
+		// the count is the minimum between nr and the enumerable count
 		result._count = () => Math.min(nr, self.count());
 		result._canSeek = self._canSeek;
+		// this can seek only if the original enumerable could seek
 		if (self._canSeek) {
 			result._tryGetAt = index => {
 				if (index < 0 || index >= result.count()) return null;
