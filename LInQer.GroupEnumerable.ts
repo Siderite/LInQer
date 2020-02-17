@@ -56,6 +56,7 @@ namespace Linqer {
 		const gen = function* () {
 			const groupMap = new Map<any, any>();
 			let index = 0;
+			// iterate all items and group them in a Map
 			for (const item of self) {
 				const key = keySelector(item, index);
 				const group = groupMap.get(key);
@@ -66,6 +67,7 @@ namespace Linqer {
 				}
 				index++;
 			}
+			// then yield a GroupEnumerable for each group
 			for (const [key, items] of groupMap) {
 				const group = new GroupEnumerable(items, key);
 				yield group;

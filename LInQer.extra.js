@@ -7,7 +7,7 @@ var Linqer;
 /// <reference path="./LInQer.Enumerable.ts" />
 /// <reference path="./LInQer.OrderedEnumerable.ts" />
 (function (Linqer) {
-    /// randomizes the enumerable
+    /// randomizes the enumerable (partial Fisher-Yates)
     Linqer.Enumerable.prototype.shuffle = function () {
         const self = this;
         function* gen() {
@@ -67,6 +67,7 @@ var Linqer;
     };
     /// returns the distinct values based on a hashing function
     Linqer.Enumerable.prototype.distinctByHash = function (hashFunc) {
+        // this is much more performant than distinct with a custom comparer
         const self = this;
         const gen = function* () {
             const distinctValues = new Set();
@@ -82,6 +83,7 @@ var Linqer;
     };
     /// returns the values that have different hashes from the items of the iterable provided
     Linqer.Enumerable.prototype.exceptByHash = function (iterable, hashFunc) {
+        // this is much more performant than except with a custom comparer
         Linqer._ensureIterable(iterable);
         const self = this;
         const gen = function* () {
@@ -96,6 +98,7 @@ var Linqer;
     };
     /// returns the values that have the same hashes as items of the iterable provided
     Linqer.Enumerable.prototype.intersectByHash = function (iterable, hashFunc) {
+        // this is much more performant than intersect with a custom comparer
         Linqer._ensureIterable(iterable);
         const self = this;
         const gen = function* () {
@@ -144,6 +147,7 @@ var Linqer;
         }
         const self = this;
         Linqer._ensureInternalTryGetAt(this);
+        // generator uses a buffer to hold all the items within the offset interval
         const gen = function* () {
             const buffer = Array(offset);
             let index = 0;
@@ -158,12 +162,14 @@ var Linqer;
             }
         };
         const result = new Linqer.Enumerable(gen);
+        // count is the same as of the original enumerable
         result._count = () => {
             const count = self.count();
             if (!result._wasIterated)
                 result._wasIterated = self._wasIterated;
             return count;
         };
+        // seeking is possible only if the original was seekable
         if (self._canSeek) {
             result._canSeek = true;
             result._tryGetAt = (index) => {
@@ -195,6 +201,7 @@ var Linqer;
         }
         const self = this;
         Linqer._ensureInternalTryGetAt(this);
+        // generator uses a buffer to hold all the items within the offset interval
         const gen = function* () {
             const buffer = Array(offset);
             let index = 0;
@@ -213,12 +220,14 @@ var Linqer;
             }
         };
         const result = new Linqer.Enumerable(gen);
+        // count is the same as of the original enumerable
         result._count = () => {
             const count = self.count();
             if (!result._wasIterated)
                 result._wasIterated = self._wasIterated;
             return count;
         };
+        // seeking is possible only if the original was seekable
         if (self._canSeek) {
             result._canSeek = true;
             result._tryGetAt = (index) => {
@@ -248,6 +257,8 @@ var Linqer;
         }
         const self = this;
         Linqer._ensureInternalTryGetAt(this);
+        // generator iterates all elements, 
+        // then yields the result of the filler function until minLength items
         const gen = function* () {
             let index = 0;
             for (const item of self) {
@@ -259,12 +270,14 @@ var Linqer;
             }
         };
         const result = new Linqer.Enumerable(gen);
+        // count is the maximum between minLength and the original count
         result._count = () => {
             const count = Math.max(minLength, self.count());
             if (!result._wasIterated)
                 result._wasIterated = self._wasIterated;
             return count;
         };
+        // seeking is possible if the original was seekable
         if (self._canSeek) {
             result._canSeek = true;
             result._tryGetAt = (index) => {
@@ -294,6 +307,10 @@ var Linqer;
         }
         const self = this;
         Linqer._ensureInternalTryGetAt(self);
+        // generator needs a buffer to hold offset values
+        // it yields values from the buffer when it overflows
+        // or filler function results if the buffer is not full 
+        // after iterating the entire original enumerable
         const gen = function* () {
             const buffer = Array(minLength);
             let index = 0;
@@ -324,12 +341,14 @@ var Linqer;
             } while (!done);
         };
         const result = new Linqer.Enumerable(gen);
+        // count is the max of minLength and the original count
         result._count = () => {
             const count = Math.max(minLength, self.count());
             if (!result._wasIterated)
                 result._wasIterated = self._wasIterated;
             return count;
         };
+        // seeking is possible only if the original was seekable
         if (self._canSeek) {
             result._canSeek = true;
             result._tryGetAt = (index) => {
