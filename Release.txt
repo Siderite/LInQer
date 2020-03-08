@@ -1,3 +1,5 @@
+2020-03-08 - 1.2.2
+	- made typings work for Visual Studio Code for Node.js
 2020-02-16 - 1.2.1
 	- added comments to the code to better explain the mechanism
 	- bugfix: canSeek was not set for reverse

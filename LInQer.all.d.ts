@@ -819,3 +819,4 @@ declare namespace Linqer {
         padStart(minLength: number, filler: any | ((index: number) => any)): Enumerable;
     }
 }
+export = Linqer; 

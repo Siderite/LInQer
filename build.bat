@@ -18,6 +18,7 @@ call tsc --p tsconfig.json --sourceMap
 call tsc --p tsconfig.slim.json --sourceMap --noResolve
 call tsc --p tsconfig.extra.json --sourceMap --noResolve
 call tsc --p tsconfig.all.json --sourceMap
+ECHO export = Linqer; >> linqer.all.d.ts
 
 REM Delete intermediary Javascript files
 DEL LInQer.Enumerable.js

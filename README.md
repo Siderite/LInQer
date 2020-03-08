@@ -28,6 +28,9 @@ in Node.js you have to prepend:
 const Linqer = require('@siderite/linqer');
 ```
 
+in Typescript, use the .ts files directly or install @types/node and use require, I guess. I couldn't make it work for both TS and JS.
+I will try to make that happen in version 2, which will probably have a different file layout.
+
 
 # Licence
 MIT

@@ -1,6 +1,6 @@
 {
   "name": "@siderite/linqer",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "The C# Language Integrated Queries ported for Javascript for amazing performance",
   "main": "LInQer.all.js",
   "scripts": {
@@ -24,9 +24,9 @@
     "url": "https://github.com/Siderite/LInQer/issues"
   },
   "homepage": "https://siderite.dev/blog/linq-in-javascript-linqer",
-  "dependencies": {},
-  "devDependencies": {
+  "dependencies": {
     "@types/node": "^13.7.0"
   },
+  "devDependencies": {},
   "typings": "./LInQer.all.d.ts"
 }
