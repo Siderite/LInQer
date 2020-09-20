@@ -962,3 +962,8 @@ QUnit.test( "Enumerable.padStart no canSeek func elementAt", function( assert ) 
     assert.deepEqual( result.elementAt(1),12, "Passed!" );
     assert.deepEqual( result._wasIterated,true, "Passed!" );
 });
+
+QUnit.test( "GitHub issue #22", function( assert ) {
+    const result = Enumerable.from([{ a: [1,2] }, { a: [2,3,4] }]).selectMany(x => x.a).toArray();
+    assert.deepEqual( result,[1,2,2,3,4], "Passed!" );
+});

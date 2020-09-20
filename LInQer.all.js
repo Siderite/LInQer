@@ -906,8 +906,9 @@ var Linqer;
         const gen = function* () {
             let index = 0;
             for (const item of self) {
-                Linqer._ensureIterable(item);
-                for (const child of selector(item, index)) {
+                const iter = selector(item, index);
+                Linqer._ensureIterable(iter);
+                for (const child of iter) {
                     yield child;
                 }
                 index++;
