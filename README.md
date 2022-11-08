@@ -1,3 +1,5 @@
+MAJOR UPDATE: I've rewritten the entire thing into [linqer-ts](https://www.npmjs.com/package/@siderite/linqer-ts). Any improvements or updates will be on that project.
+
 # LInQer
 The C# Language Integrated Queries ported for Javascript for amazing performance
 
